@@ -1,0 +1,341 @@
+---
+title: "Assignment 6.1 GSS 2016 Survey Data"
+author: "Larry Heckel"
+date:  April 16, 2019
+output: html_document
+  
+  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Assignment 6.1 GSS 2016 Survey Data
+
+Work with your previously assigned team members on this assignment. Data for this assignment originated from the General Society Survey (GSS). The GSS gathers data on contemporary American society in order to monitor and explain trends and constants in attitudes, behaviors, and attributes. Hundreds of trends have been tracked since 1972. In addition, since the GSS adopted questions from earlier surveys, trends can be followed for up to 70 years. Only data from the 2016 GSS survey is included in this dataset – GSS2016.csv.
+
+If you are interested in getting at a different year or a cumulative dataset you can visit http://www.gss.norc.org
+
+For this assignment, you will need to load and activate the ggplot2 package. You are encouraged to complete the assigned reading and DataCamp exercises before starting their work. Each of you should first produce your own version of the following deliverables then share with your team members. Team members will then collaborate on their approach and insights, refining their work before submitting for a grade. 
+
+As a data science intern with newly learned knowledge in skills in statistical correlation, regression and R programming, you are interested in looking at the GSS 2016 survey data, specifically the Siblings and Childs variables have peaked your interest. A codebook for the GSS is available here: GSS_Codebook_Index.pdf and contains all of the GSS variables and descriptions. 
+
+The first question you are interested in answering is:  “Is there a significant relationship between the number of siblings a survey respondent has and number of his or her children?”  
+
+The following guidelines describe minimum deliverables needed for the assignment submission.
+
+# Part 1 Assignment
+
+a. Construct a scatterplot of these two variables in R studio and place the best-fit linear regression line on the scatterplot. Describe the relationship between the number of siblings a respondent has (SIBS) and the number of his or her children (CHILDS).
+
+b. Use R to calculate the covariance of the two variables and provide an explanation of why you would use this calculation and what the results indicate.
+
+c. Choose the type of correlation test to perform, explain why you chose this test, and make a prediction if the test yields a positive or negative correlation?
+
+d. Perform a correlation analysis of the two variables and describe what the calculations in the correlation matrix suggest about the relationship between the variables. Be specific with your explanation.
+
+e. Calculate the correlation coefficient and the coefficient of determination, describe what you conclude about the results.
+
+f. Based on your analysis, what can you say about the relationship between the number of siblings and the number of his or her children?
+
+g. Produce an appropriate graph for the variables. Report, critique and discuss the skewness and any significant scores found. 
+
+h. Expand your analysis to include a third variable – Sex. Perform a partial correlation,
+“controlling” the Sex variable. Explain how this changes your interpretation and explanation of the results.
+
+Report and discuss all of your calculations and critiques using R Markdown.
+
+# Part 2 Assignment
+
+a. Run a regression analysis where SIBS predicts CHILDS.
+
+b. What are the intercept and the slope? What are the coefficient of determination and the correlation coefficient?
+
+c. For this model, how do you explain the variation in the number of children someone has? What is the amount of variation not explained by the number of siblings?
+
+d. Based on the calculated F-Ratio does this regression model result in a better prediction of the number of children than if you had chosen to use the mean value of siblings?
+
+e. Use the model to make a prediction: What is the predicted number of children for someone with three siblings?
+
+f. Use the model to make a prediction: What is the predicted number of children for someone without any siblings?
+
+
+```{r echo=FALSE}
+options(scipen=100)
+options(digits=2)
+```
+```{r echo=TRUE}
+#libraries to use
+library(ggplot2)
+library(readr)
+library(dplyr)
+library(stringr)
+library(psych)
+library(janitor)
+library(car)
+library(QuantPsyc)
+library(pastecs)
+library(ggm)
+
+#read and examine the source data
+gss2016 <- read_csv("gss-2016.csv", guess_max = 3000)
+#str(gss2016)
+head(gss2016)
+
+#use the janitor package to remove empty rows and columns
+gss2016Clean <- remove_empty(gss2016, which = c("rows","cols"))
+head(gss2016Clean)
+```
+A couple of comments on the above code, in reading and examining the file.
+
+1. I had to add the "guess_max" parameter to ensure that read_csv assigned the correct
+    variable type to each column. Over 30 columns did not have an actual value until after
+    the 1,000th row, resulting in an incorrect type assignment, and therefore a parsing
+    error in the read.
+    
+2. The data is exceptionally sparse, so I added the janitor package in order to attempt to
+    eliminate some  of the rows/columns that had no data in them. No rows, and only two
+    columns, contained no data, so while the effort was worth trying, it did not yield
+    appreciable results, so I will continue with the original data frame.
+    
+3. Finally, given the data sparseness, were I looking to store this in a database, I might
+    think about using some form of NoSQL solution, in which the data records only contain
+    the key-value pairs for which there is data. YEAR and ID are the key values, and all
+    others have data only based on the respondent answers. Just a thought.
+
+## Part 1
+
+####a. Construct a scatterplot of these two variables in R studio and place the best-fit linear regression line on the scatterplot. Describe the relationship between the number of siblings a respondent has (SIBS) and the number of his or her children (CHILDS).
+```{r echo=FALSE}
+sibChildplot <- ggplot(gss2016, aes(x=SIBS,y=CHILDS)) +
+                  geom_point()  + geom_jitter() +
+                  stat_smooth(method=lm, na.rm=TRUE)
+sibChildplot
+```
+```{r echo=TRUE}
+sibChildlm <- lm(gss2016$CHILDS ~ gss2016$SIBS, na.action=na.omit)
+sibChildlm
+summary(sibChildlm)
+```
+In this analysis, the outcome variable is CHILDS, the number of children the respondent has,
+  and the predictor variable is SIBS, the number of siblings that the respondent has. In
+  order to understand the relationship between the two variables, the regression line's
+  slope gives the change in the outcome variable associated with a single unit change in the
+  predictor variable. In this case, the model predicts that each additional sibling the
+  responder has leads to 0.104 additional children for the responder.
+
+####b. Use R to calculate the covariance of the two variables and provide an explanation of why you would use this calculation and what the results indicate.
+```{r echo=TRUE}
+covSibChild <- cov(gss2016$CHILDS, gss2016$SIBS, use = "pairwise.complete.obs")
+covSibChild
+```
+Covariance is a measure of how two variables are related to each other. The measure
+  indicates how each of the variables deviates from its mean value, in relation to the 
+  other variable. A positive covariance indicates that as one variable deviates from its
+  mean, the other one deviates in the same direction (positive-positive or
+  negative-negative). A negative covariance indicates that as one deviates from its mean,
+  the other changes in the opposite direction (positive-negative).
+
+In general, the larger the covariance, the stronger the relationship, and the magnitude of    the value, and the strength, depends on the scale of the two variables. In this case, both
+  of the variables have the same scale, the number of people defined (sibling or child).
+
+The reason for using this measurement is that it provides a simple metric to describe the
+  relationship between the two variables.
+  
+The covariance between the number of siblings and the number of children is 1.1, meaning that there is a positive relationship between the two, and based on the scale of the two, the relationship appears to be fairly strong. As the number of siblings increases, so does the number of children, and vice versa.
+
+
+####c. Choose the type of correlation test to perform, explain why you chose this test, and make a prediction if the test yields a positive or negative correlation?
+
+The correlation test will be the Pearson correlation coefficient, because it provides a
+  value on a standard scale from -1 to +1, from perfect negative to perfect positive
+  correlation. I predict that there will be a positive correlation, the same as the 
+  covariance showed.
+
+
+####d. Perform a correlation analysis of the two variables and describe what the calculations in the correlation matrix suggest about the relationship between the variables. Be specific with your explanation.
+
+```{r echo=TRUE}
+corSibChild <- cor.test(gss2016$SIBS, gss2016$CHILDS, use="pairwise.complete.obs", method="pearson")
+corSibChild
+```
+The Pearson correlation coefficient is 0.2, and the 95% confidence interval range is 
+  0.16-0.23. Because this range does not cross 0, we are confident in the positive 
+  relationship between number of siblings and number of children. In the case of this
+  analysis, the null hypothesis is that the correlation is 0, and the computed 
+  p-value < 0.001 provides strong evidence against this null hypothesis, so we reject it
+  and accept the alternative hypothesis, that the true correlation is not equal to 0,         concluding that the correlation is as computed.
+
+####e. Calculate the correlation coefficient and the coefficient of determination, describe what you conclude about the results.
+
+Correlation Coefficient
+```{r echo=TRUE}
+cor(gss2016$SIBS, gss2016$CHILDS, use="pairwise.complete.obs", method="pearson")
+```
+Coefficient of Determination
+```{r echo=TRUE}
+cor(gss2016$SIBS, gss2016$CHILDS, use="pairwise.complete.obs", method="pearson")^2
+```
+
+The coefficient of determination is the amount of variability in one variable that is 
+  shared by the other. It is a measure of the substantive importance of the relationship
+  between the two variables, and the value is expressed as a percentage.
+
+In the results above, and as computed previously, the correlation coefficient is 0.2, which
+  indicates a relatively weak correlation between number of siblings and number of 
+  children. The coefficient of determination is 0.04, meaning that the variability that
+  the two share is only 4%, and that 96% of the variability of each of the two outcomes
+  is dependent upon other factors.
+
+####f. Based on your analysis, what can you say about the relationship between the number of siblings and the number of his or her children?
+
+In general, parents who come from larger families will also bear larger families, and
+  smaller families in childhood beget smaller families adulthood. This association is
+  not exceptionally strong, however, and we are likely to find other factors that help
+  to drive these outcomes, were we to delve into further analyses.
+
+
+####g. Produce an appropriate graph for the variables. Report, critique and discuss the skewness and any significant scores found. 
+```{r echo=TRUE}
+options(scipen=100)
+options(digits=2)
+stat.desc(gss2016$SIBS)
+stat.desc(gss2016$CHILDS, basic = TRUE, norm = TRUE)
+#subset the data for siblings up to 22
+gss2016SibChild23 <- subset(gss2016,SIBS<23, select = c(SIBS,CHILDS))
+#subset the data for siblings up to 14
+gss2016SibChild15 <- subset(gss2016,SIBS<15, select = c(SIBS,CHILDS))
+```
+```{r echo=FALSE}
+gss2016GraphData <- ggplot(data=gss2016,aes(as.factor(SIBS),CHILDS))
+gss2016box <- gss2016GraphData + geom_boxplot() +
+  ggtitle("Siblings and Children") +
+  xlab("Number of Siblings") + ylab("Number of Children")
+gss2016box
+
+gss2016GraphData2 <- ggplot(data=gss2016SibChild23,aes(x=as.factor(CHILDS)))
+histgss201623 <- gss2016GraphData2 + geom_histogram(stat="count") +
+  ggtitle("Number of Siblings Full Data Set") +
+  xlab("Number of Children") + ylab("Count of Families")
+histgss201623
+
+gss2016GraphData3 <- ggplot(data=gss2016SibChild15,aes(x=as.factor(CHILDS)))
+histgss2016 <- gss2016GraphData3 + geom_histogram(stat="count") +
+                  ggtitle("Number of Siblings") +
+                  xlab("Number of Children") + ylab("Count of Families")
+histgss2016 + facet_wrap( ~SIBS, scales="free_y")
+```
+
+
+First I ran descriptive statistics on the number of siblings and the number of children. The
+  two statistics that I found interesting were the means and medians of the two variables.
+  The median of the siblings is 3, while it is 2 for the children. Additionally, the mean of
+  the siblings is 3.72, while the childs mean is only 1.85. This basically tells us that
+  that parents in the data gathered are having smaller families than they grew up in. An
+  interesting further analysis about this would be to determine what other factors have
+  effects on the number of children, controlling for number of siblings. 
+  
+For skew and kurtosis, I focus on the number of children, as it is the dependent variable.
+  The skew value of 0.94 indicates a significant positive skewness, with a long tail to the
+  right.  
+  
+I created three graphical views of the data.
+
+  1. The box plot confirms the slow rise in the number of children as siblings increase.
+      From 0-2 siblings, 1 child is the mean, and it is 2 for 3-11 siblings. Of note in
+      the 3-11 group is that, from 3-7 siblings, the plots look the same, they increase
+      at 8-9, and back down at 10-11. Higher number of siblings generally correlate to
+      higher children, above 11 siblings.
+  2. The first histogram is simply the count of families with "x" number of children, from
+      0-8. The histogram is bi modal, with peaks at 0 and 2 children, and a tail to the 
+      right. Because the data above 22 siblings is sparse, I selected the children for
+      siblings at 22 and below.
+  3. To see what the child histograms look like for individual sibling amounts, I further
+      filtered the data to be for siblings at 14 and lower, and ran children histograms
+      for each sibling value for 0-13. From 0-6 siblings, the bi modal distribution is 
+      consistent, as it also is for 8, 9, 11, 12, and 14 siblings. The other interesting
+      view that the graphs tell us is that, by looking at the y-axis scales of the graphs, 
+      we can see that 1-3 siblings are the most common sibling values, and therefore
+      have the greatest effect on the overall population distribution.
+
+####h. Expand your analysis to include a third variable – Sex. Perform a partial correlation, “controlling” the Sex variable. Explain how this changes your interpretation and explanation of the results.
+
+In order to execute the partial correlation, I will subset the data to only the three
+  variables in the computation, and then remove rows with missing data using
+  complete.cases.
+  
+```{r echo=TRUE}
+gss2016SCS <- subset(gss2016, select = c(SIBS,CHILDS,SEX))
+str(gss2016SCS)
+
+gss2016SCSclean <- gss2016SCS[complete.cases(gss2016SCS),]
+str(gss2016SCSclean)
+
+partCor <- pcor(c("SIBS","CHILDS","SEX"), var(gss2016SCSclean))
+partCor
+partCor^2
+
+```
+The result of the partial correlation is 0.197, which is nearly identical to the correlation
+  coefficient previously computed. What this means is that the SEX of the parent has little
+  to no effect on the relationship between the number of siblings and number of children,
+  and doesn't materially change the prior conclusions.
+
+## Part 2
+
+####a. Run a regression analysis where SIBS predicts CHILDS.
+```{r echo=TRUE}
+
+regrSibsChilds <- lm(CHILDS ~ SIBS, gss2016)
+regrSibsChilds
+summary(regrSibsChilds)
+````
+
+####b. What are the intercept and the slope? What are the coefficient of determination and the correlation coefficient?
+
+Y-intercept:  1.4678
+slope:        0.1036
+coefficient of determination: 0.03954
+```{r echo=TRUE}
+sqrt(.03954)
+```
+correlation coefficient:  0.1988467
+
+####c. For this model, how do you explain the variation in the number of children someone has? What is the amount of variation not explained by the number of siblings?
+
+The coefficient of determination between number of sibling and number of children 
+  is 0.04, meaning that the variability that the two share is only 4%, and that 96% 
+  of the variability of each of the two outcomes is dependent upon other factors. The
+  parent respondent sex has almost no effect on the number of children, so without
+  further analysis of other potentially contributing variables, 96% of the outcome
+  (number of children) is predicted by unknown factors.
+
+
+####d. Based on the calculated F-Ratio does this regression model result in a better prediction of the number of children than if you had chosen to use the mean value of siblings?
+
+For this analysis, the F-Ratio is 117.5, which is significant at p < .001. What this means
+  is that there is less than a 0.001% chance that an F-Ratio this large would be 
+  computed if the null hypothesis were true. The null hypothesis, which is that a better
+  prediction the number of children would be obtained with the mean of the number of
+  siblings, is therefore rejected. The regression model results in a better prediction
+  of the number of children, given the number of siblings, than using the number of 
+  siblings mean value.
+
+
+####e. Use the model to make a prediction: What is the predicted number of children for someone with three siblings?
+
+The linear equation is as follows:
+
+  (number children) = 0.1036(number of siblings) + 1.4678
+  
+  For 3 siblings, the model predicts 1.7786 children.
+
+
+####f. Use the model to make a prediction: What is the predicted number of children for someone without any siblings?
+
+The linear equation is as follows:
+
+  (number children) = 0.1036(number of siblings) + 1.4678
+  
+  For 0 siblings, the model predicts 1.4678 children.
