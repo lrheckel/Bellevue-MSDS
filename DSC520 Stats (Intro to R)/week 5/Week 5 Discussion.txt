@@ -1,0 +1,38 @@
+Problem Statement:
+
+For Application Maintenance teams within Johnson & Johnson, the overall objective to provide the best value at the lowest possible cost. We look to reduce our cost as much as possible, while providing the best service and value. The way that we do  that is twofold. First, we work to reduce or eliminate our non-discretionary workload, which consists of the user incidents and service requests, through things like automation and user self-service. Additionally, we optimize our team and internal working processes, for the tickets that we are not able to eliminate, to reduce the time that it takes to resolve the tickets. This is known as the Time To Resolve, or TTR.
+
+The problem statement that I am addressing is to identify the controllable factors which most affect the TTR for tickets, so that we can plan and implement internal team operating improvements which will help us to be more efficient in responding to, and resolving, tickets.
+
+Any Application Maintenance or Support team management would be interested in such analysis, because it will allow their teams to be more efficient in their operations, thereby either reducing costs, or allowing for more value-add activities, or both.
+
+
+Approach:
+
+I plan to perform analysis to determine which factors are most correlated to higher or lower TTR values. Are there factors which affect the TTR individually, and what factors work in combination to drive TTR? My approach will identify the controllable factors that support managers can investigate in more detail as to why they drive the TTR, and also investigate actions that they can implement to improve team performance.
+
+Research Questions:
+
+How does the resolution type and category affect TTR? Should we be evaluating TTR for different resolution types separately?
+
+Does Knowledge Article usage have a discernible affect on TTR? We know that KA’s are useful for pushing ticket resolution to less experienced and lower cost team members, but do we know if KA’s help them resolve faster?
+
+How does the individual application/platform affect TTR? As above, should we be separately evaluating TTR for individual applications?
+
+What factors have the greatest potential for TTR improvement? Are there factors that could be considered “low hanging fruit”?
+
+Are there quantitative factors which have an effect on the TTR?
+
+Is there seasonality in the TTR, on either a weekly or monthly basis? Do we see any TTR patterns for tickets opened on particular days of the week, or portions of the month?
+
+
+
+
+What do I currently not know:
+
+
+I don’t yet know how to run correlations and regressions (both individual and multiple). I anticipate that I will need to understand the topics coming up in the class to be successful.
+
+I haven’t yet looked closely at the data quality, so there may be data elements and observations that I will need to eliminate.
+
+Finally, I know that there will be outlier data in the TTR’s, and I don’t yet know how I will handle them.

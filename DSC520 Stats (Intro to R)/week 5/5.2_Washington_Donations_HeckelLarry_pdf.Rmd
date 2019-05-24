@@ -1,0 +1,261 @@
+---
+title: "Assignment 5.2 Washington Donations"
+author: "Larry Heckel"
+date: "April 13, 2019"
+output: pdf_document
+---
+
+# Assignment
+
+As an aspiring Data Scientist, you have heard that a majority of the time you can expect to spend on data acquisition and cleanup, aka data wrangling. For this assignment, you will be working with some data that has been manually entered into Donations tracking documents for Washington D.C. and Nebraska.   
+
+1. How many variables does the data set have, explain any peculiarities of the source data such as how     missing values are discovered.
+
+2. Data importing and cleaning steps are explained in the text and in the DataCamp exercises (tell me     why you are doing the data cleaning activities that you perform) and follow a logical process.
+
+3. Once your data is clean, show what the ﬁnal data set looks like. However, do not print off a data      frame with 200+ rows; show me the data in the most condensed form possible.
+
+4. Add a variable to your data set called Average Donation Amount. Calculate the Average Donation         Amount per transaction and insert that value into a new data set.
+
+5. Provide summary information using the appropriate R function(s) about the Donation Amount variable     in your cleaned data set. Provide a written summary paragraph that describes your findings.
+
+```{r echo=TRUE}
+# libraries to be used
+library(ggplot2)
+library(readr)
+library(dplyr)
+library(stringr)
+library(psych)
+
+# read the files individually
+washDonation <- read_csv("donations-2015-2016-DC.txt")
+nebrDonation <- read_csv("donations-2015-2016-NE.txt")
+# View(washDonation)
+# str(washDonation)
+# View(nebrDonation)
+# str(nebrDonation)
+
+#Combine the two data frames into one
+comboDonation <- rbind(washDonation, nebrDonation)
+View(comboDonation)
+str(comboDonation)
+
+```
+```{r echo=FALSE}
+################
+
+options(scipen=100)
+options(digits=2)
+```
+
+## Section 1
+
+How many variables does the data set have, explain any peculiarities of the source data such as how   missing values are discovered.
+
+  The data set contains 16 variables. Each row, or observation, is the record of a donation to a candidate for a political office. In each row, there is one variable, called "donation_amount", which records the dollar amount of the donation. The other 15 variables contain data about the donation, such as candidate and donor information.
+  
+The next step is to determine if there are missing values in any of the observations.
+
+```{r echo=TRUE}
+# create data frame with rows of data that have missing values 
+comboNA <- comboDonation[!complete.cases(comboDonation),]
+comboNA
+View(comboNA)
+#how many missing are in each column/variable?
+colSums(is.na(comboNA))
+
+```  
+The two most important variables in the data set are the candidate name and the donation amount.
+Neither of those variables has any missing values, so we will be able to answer our most basics metrics questions, which are:
+
+1. How many donations did each candidate receive:
+2. What is the total amount of money each candidate received?
+3. What is the average dollar amount of each donation, for each candidate?
+
+Additionally, the following columns also do not have any missing values:
+
+1. Party Affiliation
+2. Year of Election
+3. Candidate State
+4. Candidate Office
+5. Committee Name
+6. Donor State
+7. Donation Date
+
+The below columns have missing values (Number missing of 112,191 total donations made).
+
+1. Incumbent/Challenger Status (8 missing)
+2. Committee Party (8,222 missing)
+3. Donor Name (9 missing)
+4. Donor City (4 missing)
+5. Donor Zip (19 missing)
+6. Donor Employer (3,453 missing)
+7. Donor Occupation (2,572 missing)
+
+
+
+## Section 2
+
+Data importing and cleaning steps are explained in the text and in the DataCamp exercises (tell me    why you are doing the data cleaning activities that you perform) and follow a logical process.
+
+1. First, I will deal with missing metadata values. Some of the missing metatdata is not important
+    for the analysis at hand, only that it is not empty, so for those variables, I will provide a
+    value that will denote that it was not originally provided. For the variables that are most
+    likely required for a good analysis, I will derive what I feel are the correct values and provide
+    them. The details for each variable are listed below, and the code executed on the data frame
+    below that.
+
+    The below columns have missing values (Number missing of 112,191 total donations made).
+
+    a. Incumbent/Challenger Status (8 missing)
+        The two candidates for whom this value is missing only have these 8 rows, and don't have any
+          other entries in the data set. Therefore, we are not able to derive an appropriate value, 
+          so I will fill with "UNK" for UNKNOWN.
+    b. Committee Party (8,222 missing)
+        Is the same as Party Affiliation, so will fill with that value
+    c. Donor Name (9 missing)
+        Not an important variable, will fill with "Not Given".
+    d. Donor City (4 missing)
+        Not an important variable, will fill with "Not Given"
+    e. Donor Zip (19 missing)
+        Not an important variable, will fill with "99999"
+    f. Donor Employer (3,453 missing)
+         Not an important variable, will fill with "Not Given"
+    g. Donor Occupation (2,572 missing) 
+        Not an important variable, will fill with "Not Given"
+
+```{r echo=TRUE}
+#Create new data frame called comboClean, for the clean metadata
+#Start from comboDonation with the first data mutation, then each subsequent
+#mutation is on comboClean.
+comboClean <- comboDonation %>% mutate(donor_zip=ifelse(is.na(donor_zip), 99999, donor_zip))
+comboClean <- comboClean %>% mutate(donor_name=ifelse(is.na(donor_name), "Not Given", donor_name))
+comboClean <- comboClean %>% mutate(donor_city=ifelse(is.na(donor_city), "Not Given", donor_city))
+comboClean <- comboClean %>% mutate(donor_employer=ifelse(is.na(donor_employer), "Not Given", donor_employer))
+comboClean <- comboClean %>% mutate(donor_occupation=ifelse(is.na(donor_occupation), "Not Given", donor_occupation))
+comboClean <- comboClean %>% mutate(committee_party=ifelse(is.na(committee_party), party_affiliation, committee_party))
+
+#check for the candidates who don't have an incumber/challenger flag set
+mandel <- comboDonation %>%
+  filter(str_detect(candidate_name, "MANDE"))
+lindbeck <- comboDonation %>%
+  filter(str_detect(candidate_name, "LINDB"))
+View(mandel)
+View(lindbeck)
+
+comboClean <- comboClean %>% mutate(incumbent_challenger_status=ifelse(is.na(incumbent_challenger_status), "UNK", incumbent_challenger_status))
+
+#now check to ensure that there are no NA values
+colSums(is.na(comboClean))
+
+```
+2. Now that all of the metadata is clean, we will look at the actual donation values, to see what the
+    data distribution looks like, and if there are outliers. 
+    
+      a. I will start with by checking for values less than or equal to 0 (0 or negative), because
+          those would not make sense in terms of donations. In the context of our understanding,
+          donations must be dollars given to a candidate, not from the candidate to the donor. We
+          will remove those rows from the data set. There are 490 observations that meet this
+          criteria, and are removed.
+```{r echo=TRUE}
+donCount <- count(comboClean, vars=donation_amount <= 0)
+str(donCount)
+
+comboCleanDonation <- subset(comboClean,subset = (donation_amount > 0))
+str(comboCleanDonation)
+
+```
+      b. Next I'll check the data distribution of the donation amounts, to see if there is anything
+          out of the ordinary with it. I'll run summary statistics and some data distribution graphs
+          to also see the data visually. See the results below, and conclusions that follow.
+          
+```{r echo=TRUE}
+summary(comboCleanDonation$donation_amount)
+```
+```{r echo=FALSE}
+boxplot_comboCleanDonation <- ggplot(data=comboCleanDonation,aes(y=donation_amount)) +
+  geom_boxplot() 
+boxplot_comboCleanDonation
+
+hist_comboCleanDonation_Norm <- ggplot(data=comboCleanDonation,aes(x=donation_amount)) + 
+  geom_histogram(aes(y=..count.., fill=..count..)) +
+  scale_x_log10("donation_amount") +
+  ggtitle("Donation Amount Histogram") +
+  ylab("Number of Donations") 
+hist_comboCleanDonation_Norm
+
+donationHigh <- subset(comboCleanDonation, comboCleanDonation$donation_amount > 10000)
+str(donationHigh)
+```
+          The distribution of the donation amounts is heavily skewed to the left, with the median
+          being 100, meaning that half of the donations are $100 or less. Additionally, the mean is
+          $399, so there are fewer, exceptionally larger donations in the data set.
+          
+          The range and distribution of the amounts makes visualizing the data difficult to
+          represent, as can be seen from the box plot graph. To be able to view the amounts, 
+          I have scaled the data to the log10 of the donation amount. We can still see
+          in this graph the left skew of the data, and how a small number of exceptionally high
+          donations affect the view.
+          
+          So I looked at the donations of amounts greater than $10,000, to see if they make sense,
+          and they do, so I will keep them in the data set. The Donor Occupations indicate that the
+          Donors are of sufficient means to make these types of large donations, so they stay.
+          
+          There are no other data cleansing tasks to do, so I will proceed to the analysis.
+
+## Section 3
+
+Once your data is clean, show what the ﬁnal data set looks like. However, do not print off a data     frame with 200+ rows; show me the data in the most condensed form possible.
+
+```{r echo=TRUE}
+str(comboCleanDonation)
+```
+## Section 4
+
+Add a variable to your data set called Average Donation Amount. Calculate the Average Donation        Amount per transaction and insert that value into a new data set.
+
+```{r echo=TRUE}
+#calculate the Average Donation Amount,
+#Create vector to append to data frame
+AvgDonAmt <- c(mean(comboCleanDonation$donation_amount))
+names(AvgDonAmt) <- c("Average Donation Amount")
+
+#Append the Average to each row in the data frame,
+#show the structure, to confirm success
+comboCleanDonationAvg <- cbind(comboCleanDonation, AvgDonAmt)
+str(comboCleanDonationAvg)
+
+
+```
+## Section 5
+
+Provide summary information using the appropriate R function(s) about the Donation Amount variable    in your cleaned data set. Provide a written summary paragraph that describes your findings.
+
+```{r echo=TRUE}
+options(scipen=100)
+options(digits=2)
+summary(comboCleanDonation$donation_amount)
+describe(comboCleanDonationAvg$donation_amount)
+```
+### Conclusion
+
+As I had noted above, The distribution of the donation amounts is heavily skewed to the left, with
+  the median being 100, meaning that half of the donations are $100 or less. Additionally, the mean
+  is $399, so there are fewer, exceptionally larger donations in the data set. Finally, the 3rd
+  Quantile value is only $500, meaning that 75% of the donations are that amount or less.
+  
+Further summary statistics confirm all of this, as the skew and kurtosis values both indicate the
+  left skew and high peak of the graph.
+  
+What all this means in real terms is that the candidates have a large number of donors who give
+  smaller donations, and a few who give much larger donations. This is consistent with other reports
+  of campaign contributions in other election cycles.
+  
+Although out of scope of this analysis, the data set is cleaned and able to provide answers to more
+  insightful questions, such as those cited at the beginning of this write-up, and others, such as
+  total and average donations by political party, by election race, state, office, and all of the
+  metadata variables in the data set. One additional note is that, if these analysis were foreseen,
+  then we would go back and spend much more effort cleaning the data, looking to derive useful
+  values, rather than simply filling them in with "UNK" or "NOT PROVIDED".
+  
+
