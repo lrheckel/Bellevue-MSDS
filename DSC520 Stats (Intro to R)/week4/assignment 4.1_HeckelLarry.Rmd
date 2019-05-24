@@ -1,0 +1,778 @@
+---
+title: "Assignment 4.1 Student Assignment Performance Data"
+author: "Larry Heckel"
+date: "April 6, 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Assignment
+
+Imagine you are a graduate assistant and your supervisor has asked you to look at student assignment performance data. The data file you will use is named Exams.dat. 
+
+The first three variables in the data are a percentage based on 100 points. 
+The fourth variable is based on a score achieved out of 15 points. 
+The stats variable are the letter grades for the Stats exam where A=1, B=2, C=3, D=4, F=5. 
+The uni variable indicates which professor taught that section of the course. 0=Professor George,         1=Professor Jeff, and 3=Professor Tushmann. 
+
+Your supervisor has requested an appropriate statistical analysis be performed visually and numerically. 
+
+1.  Perform an analysis for the entire dataset and for each group. 
+        In addition, produce an appropriate graph for each variable. 
+        Perform data transformations as appropriate and explain if the transformation you performed               was beneficial or created more problems. 
+        Use R Markdown to report, critique and discuss the skewness and any significant scores found. 
+
+2.  Perform a Shapiro-Wilk test for the entire dataset and for each group. 
+        Use R Markdown to report the results found along with an appropriate plot. 
+        Include an appropriate narrative throughout.
+
+```{r examDataBase, echo=TRUE}
+# libraries to be used
+library(ggplot2)
+library(readr)
+library(pastecs)
+library(psych)
+
+# read the file
+examDataX <- read_delim("exams.dat", delim = '\t')
+
+#set our display options for the analysis results
+options(scipen=100)
+options(digits=2)
+```
+```{r echo=TRUE}
+#removing the extraneous column in the data
+examData <- within(examDataX, rm(X7))
+View(examData)
+str(examData)
+```
+## First Impressions
+
+We can see that there are 6 variables within the data set, of which 5 are evaluations (scores, grades) of some form, and the 6th is an identifier of the professor who taught the course.
+
+Of the 5 evaluations, the first three (exam, computer, lectures) are represented as a continuous numerical percentage (out of 100), numeracy is an discrete integer raw score out of 15, and stats is a discrete integer value representing a standard letter grade, with 1=A and 5=F.
+
+The approach will be to analyze each of the evaluations, to determine how their values are distributed and detect patterns within each. I'll also perform a Shapiro-Wilk test for normality on each of the evaluations. I will then do the same for the evaluations of each professor who taught the course, to see what effect the professor's teaching had on the evaluation results. 
+
+### First let's look at the scores for the exam evaluation
+```{r echo=TRUE}
+# Analyze the entire data set.
+examStats     <- stat.desc(examData$exam, norm = TRUE)
+examStats
+shapiro.test(examData$exam)
+
+```
+
+```{r echo=FALSE}
+histexamData_exam <- ggplot(data=examData,aes(x=exam)) + 
+  geom_histogram(aes(fill=..count..),binwidth=2) +
+   ggtitle("Exam Scores") +
+   xlab("Percent Achieved") + ylab("Number of Students") +
+   scale_fill_gradient("Number of Students", low="blue", high="green")
+histexamData_exam
+
+histexamData_examNorm <- ggplot(data=examData,aes(x=exam)) + 
+   geom_histogram(aes(y=..density.., fill=..count..), binwidth=2) +
+   stat_function(fun = dnorm, args=with(data=examData, c(mean = mean(exam), sd = sd(exam)))) +
+   scale_x_continuous("exam") +
+   ggtitle("Normal Curve with Histogram") +
+   xlab("% Achieved") + ylab("Number of Students") +
+   scale_fill_gradient("Number of Students", low="blue", high="green")
+histexamData_examNorm
+
+histexamData_examProb <- ggplot(data=examData,aes(sample=exam)) + 
+     stat_qq() + stat_qq_line(col = "Red")
+histexamData_examProb
+```
+### Impressions of the exam results
+
+Without examining the numerical statistics, we can see from the first  histogram that the exam results are not normally distributed. The basic histogram at first glance appears to show 3 data peaks, one each centering around 35%, 60%, and 75%, leading to a supposition that there might be use in dividing the data up by the professor, to see if that is what might be driving the data peaks. 
+
+In looking at the numerical statistics, nothing really stands out to change my initial visual impressions. The mean and median are essentially the same, meaning that the data is evenly distributed, and the skewness  measures confirm that. The standard deviation of almost 20 confirms that the results are widely distributed, with a range of 84 (out of 100 possible).
+
+For the Shapiro-Wilk test, we evaluate the p-value to determine normality. If the p-value < .05, then we conclude that the distribution of the data deviates from a normal distribution. The Shapiro-Wilk test p-value of 0.006182 confirms that the exam distribution is not normal.
+
+### Next let's look at the scores for the computer evaluation
+```{r, echo=TRUE}
+###################
+computerStats <- stat.desc(examData$computer, norm = TRUE)
+computerStats
+shapiro.test(examData$computer)
+```
+``` {r echo=FALSE}
+histexamData_computer <- ggplot(data=examData,aes(x=computer)) + 
+  geom_histogram(aes(fill=..count..),binwidth=2) +
+   ggtitle("Computer Scores") +
+   xlab("Percent Achieved") + ylab("Number of Students") +
+   scale_fill_gradient("Number of Students", low="blue", high="green")
+histexamData_computer
+
+histexamData_computerNorm <- ggplot(data=examData,aes(x=computer)) + 
+   geom_histogram(aes(y=..density.., fill=..count..), binwidth=2) +
+   stat_function(fun = dnorm, args=with(data=examData, c(mean = mean(exam), sd = sd(exam)))) +
+   scale_x_continuous("computer") +
+   ggtitle("Normal Curve with Histogram") +
+   xlab("% Achieved") + ylab("Number of Students") +
+   scale_fill_gradient("Number of Students", low="blue", high="green")
+histexamData_computerNorm
+
+histexamData_computerProb <- ggplot(data=examData,aes(sample=computer)) + 
+     stat_qq() + stat_qq_line(col = "Red")
+histexamData_computerProb
+```
+### Impressions of the computer results
+
+The histogram for the computer evaluation show a much tighter data distribution, with scores in general lower than the exam results. The students clearly did not do as well, overall, on this evaluation,  as they did on the exam evaluation. 
+
+The results again show 3 fairly distinct peaks in the distribution, one each around 42%, 48%, and 54%. Similar to the conclusion for the exam results, it leads to the supposition that there might be a way of subsetting the data to yield better insights. 
+
+The lower end of the range, from around 25%-45%, has a high number of results, reflecting that overall, the results on this evaluation were not very good.
+
+The numerical statistics again confirm what we are seeing visually. The Mean and Median are in the high 40's, meaning that the students overall did poorly on the evaluation. 
+
+The Shapiro-Wilk test p-value of 0.1103 confirms that the exam distribution is normal.
+
+### Next let's look at the scores for the lectures evaluation
+
+```{r echo=TRUE}
+#########################
+lecturesStats <- stat.desc(examData$lectures, norm = TRUE)
+lecturesStats
+shapiro.test(examData$lectures)
+```
+```{r echo=FALSE}
+histexamData_lectures <- ggplot(data=examData,aes(x=lectures)) + 
+  geom_histogram(aes(fill=..count..),binwidth=2) +
+   ggtitle("Lectures Scores") +
+   xlab("Percent Achieved") + ylab("Number of Students") +
+   scale_fill_gradient("Number of Students", low="blue", high="green")
+histexamData_lectures
+
+histexamData_lecturesNorm <- ggplot(data=examData,aes(x=lectures)) + 
+   geom_histogram(aes(y=..density.., fill=..count..), binwidth=2) +
+   stat_function(fun = dnorm, args=with(data=examData, c(mean = mean(lectures), sd = sd(lectures)))) +
+   scale_x_continuous("lectures") +
+   ggtitle("Normal Curve with Histogram") +
+   xlab("% Achieved") + ylab("Number of Students") +
+   scale_fill_gradient("Number of Students", low="blue", high="green")
+histexamData_lecturesNorm
+
+histexamData_lecturesProb <- ggplot(data=examData,aes(sample=lectures)) + 
+     stat_qq() + stat_qq_line(col = "Red")
+histexamData_lecturesProb
+```
+### Impressions of the lecture results
+
+The results here are widely distributed, and although there are a couple of peaks in the data, centered around 45% and 70%, it is generally evenly distributed across the range. There appears to be a somewhat normal distribution of the, as the graphs combining the histogram with the normal curve and probability plot show, but the number of students at the tails does not go to zero.
+
+As with the previously evaluated variable, the numerical statistics confirm the visual impressions. In particular, the standard deviation of over 22 confirms the wide distribution of the results.
+
+The Shapiro-Wilk test p-value of 0.006155 confirms that the lectures distribution is not normal.
+
+### Next let's look at the scores for the numeracy evaluation
+
+Remember to note that the scale here is 0-15.
+```{r echo=TRUE}
+########################
+numeracyStats <- stat.desc(examData$numeracy,norm = TRUE)
+numeracyStats
+shapiro.test(examData$numeracy)
+```
+```{r echo=FALSE}
+histexamData_numeracy <- ggplot(data=examData,aes(x=numeracy)) + 
+  geom_histogram(aes(fill=..count..),binwidth=1) +
+   ggtitle("Numeracy Scores") +
+   xlab("Number Achieved") + ylab("Number of Students") +
+   scale_fill_gradient("Number of Students", low="blue", high="green")
+histexamData_numeracy
+
+histexamData_numeracyNorm <- ggplot(data=examData,aes(x=numeracy)) + 
+   geom_histogram(aes(y=..density.., fill=..count..), binwidth=2) +
+   stat_function(fun = dnorm, args=with(data=examData, c(mean = mean(numeracy), sd = sd(numeracy))))+
+   scale_x_continuous("numeracy") +
+   ggtitle("Normal Curve with Histogram") +
+   xlab("Number Achieved") + ylab("Number of Students") +
+   scale_fill_gradient("Number of Students", low="blue", high="green")
+histexamData_numeracyNorm
+
+histexamData_numeracyProb <- ggplot(data=examData,aes(sample=numeracy)) + 
+     stat_qq() + stat_qq_line(col = "Red")
+histexamData_numeracyProb
+
+```
+### Impressions of the numeracy results
+
+Overall, assuming that higher scores are better, the students in general did poorly on this evaluation. Both the histograms and numerical results confirm, with the mean of 4.6 and median of 4 showing this conclusion. The data is highly skewed toward the lower end of the distribution, and there are only a few students who achieved a score greater than 10 (out of 15).
+
+The Shapiro-Wilk test p-value of 0.0000004552 confirms that the exam distribution is not normal.
+
+### Finally, let's look at the letter grades for the students
+```{r echo=TRUE}
+statsStats <- stat.desc(examData$stats,norm = TRUE)
+statsStats
+```
+```{r echo=FALSE}
+histexamData_stats <- ggplot(data=examData,aes(x=stats)) + 
+  geom_histogram(aes(fill=..count..),binwidth=1) +
+  ggtitle("Stats Grades") +
+  xlab("Number Achieved") + ylab("Number of Students") +
+  scale_fill_gradient("Number of Students", low="blue", high="green")
+histexamData_stats
+
+histexamData_statsProb <- ggplot(data=examData,aes(sample=stats)) + 
+  stat_qq() + stat_qq_line(col = "Red")
+histexamData_statsProb
+shapiro.test(examData$stats)
+```
+### Impressions of the grade results
+
+First, it is notable that 10 of the 150 students did not have grades recorded. Those records are excluded from the analysis.
+
+Two things stand out about the distribution of grades. 
+
+First, a lot of students failed the class. For the professors and school administrators, this result might warrant a further examination of this group of students in a separate evaluation, to determine if there are underlying factors that would lead to this results.
+
+Second, outside of the high number of failures, the grades distribution appears to be normally distributed around a "C" grade. The "average" grade is about a "C+", although only standard letter grades were issued. 
+
+The Shapiro-Wilk test p-value of 0.000000002869 confirms that the stats(student grades) distribution is not normal.
+
+## Is there a correlation between the evaluation results and the professor who taught the class?
+
+Because each of the data distributions had multiple peaks, I am going to subset the student results by the professor who taught the class, to see if we can gain insights into whether the professor has an effect on student performance.
+
+The methodology I will use is to first look at the student results graphically, to see if I can detect any patterns in the data, then I will follow up with statistics, to further analyze the student results.
+
+I'm going to take a different approach with the individual professor groupings, from what I did above. Because I want to see if the professor teaching has an effect on the results achieved, I'm going to look at all of the histograms as a group, to see if there is on overall pattern to the results. From there, I will then examine them individually, to see what we can determine about each of the evaluations. Finally, I will examine the numerical statistics, to see what they tell us.
+
+One change that I will make in how I look at the data is that I will change my data groupings (in the histograms) from a range of 2 to a range of 1. In my graphs above, I have set the binwidth to 2, as a compromise on how much granularity to show in the data. So my percentage results are in groupings of 2%, to help with easier data visualization. Because there will be fewer students represented within the professor subsets, I will set the binwidth to 1%, and allow the data to be more granular, to attempt to better see patterns.
+
+## First, we will look at the student results for Professor George.
+
+```{r examDataGeorge, echo=TRUE}
+#subset the data for Professor George
+examDataGeorge <- subset(examData, uni=="0",
+                         select=c("exam", "computer", "lectures", "numeracy", "stats"))
+str(examDataGeorge)
+```
+
+```{r echo=FALSE}
+
+histexamDataGeorge_exam <- ggplot(data=examDataGeorge,aes(x=exam)) + 
+  geom_histogram(aes(fill=..count..),binwidth=1) +
+   ggtitle("Exam Scores") +
+   xlab("Percent Achieved") + ylab("Number of Students") +
+   scale_fill_gradient("Number of Students", low="blue", high="green")
+histexamDataGeorge_exam
+
+histexamDataGeorge_examNorm <- ggplot(data=examDataGeorge,aes(x=exam)) + 
+   geom_histogram(aes(y=..density.., fill=..count..), binwidth=1) +
+   stat_function(fun = dnorm, args=with(data=examDataGeorge, c(mean = mean(exam), sd = sd(exam)))) +
+   scale_x_continuous("exam") +
+   ggtitle("exam Normal Curve with Histogram") +
+   xlab("% Achieved") + ylab("Density of Students") +
+   scale_fill_gradient("Density of Students", low="blue", high="green")
+histexamDataGeorge_examNorm
+
+histexamDataGeorge_examProb <- ggplot(data=examDataGeorge,aes(sample=exam)) + 
+     stat_qq() + stat_qq_line(col = "Red")
+histexamDataGeorge_examProb
+
+###################
+
+histexamDataGeorge_computer <- ggplot(data=examDataGeorge,aes(x=computer)) + 
+  geom_histogram(aes(fill=..count..),binwidth=1) +
+   ggtitle("Computer Scores") +
+   xlab("Percent Achieved") + ylab("Number of Students") +
+   scale_fill_gradient("Number of Students", low="blue", high="green")
+histexamDataGeorge_computer
+
+histexamDataGeorge_computerNorm <- ggplot(data=examDataGeorge,aes(x=computer)) + 
+   geom_histogram(aes(y=..density.., fill=..count..), binwidth=1) +
+   stat_function(fun = dnorm, args=with(data=examDataGeorge, c(mean = mean(computer), sd = sd(computer)))) +
+   scale_x_continuous("computer") +
+   ggtitle("computer Normal Curve with Histogram") +
+   xlab("% Achieved") + ylab("Density of Students") +
+   scale_fill_gradient("Density of Students", low="blue", high="green")
+histexamDataGeorge_computerNorm
+
+histexamDataGeorge_computerProb <- ggplot(data=examDataGeorge,aes(sample=computer)) + 
+     stat_qq() + stat_qq_line(col = "Red")
+histexamDataGeorge_computerProb
+
+#########################
+
+histexamDataGeorge_lectures <- ggplot(data=examDataGeorge,aes(x=lectures)) + 
+  geom_histogram(aes(fill=..count..),binwidth=1) +
+   ggtitle("Lectures Scores") +
+   xlab("Percent Achieved") + ylab("Number of Students") +
+   scale_fill_gradient("Number of Students", low="blue", high="green")
+histexamDataGeorge_lectures
+
+histexamDataGeorge_lecturesNorm <- ggplot(data=examDataGeorge,aes(x=lectures)) + 
+   geom_histogram(aes(y=..density.., fill=..count..), binwidth=1) +
+   stat_function(fun = dnorm, args=with(data=examDataGeorge, c(mean = mean(lectures), sd = sd(lectures)))) +
+   scale_x_continuous("lectures") +
+   ggtitle("lectures Normal Curve with Histogram") +
+   xlab("% Achieved") + ylab("Density of Students") +
+   scale_fill_gradient("Density of Students", low="blue", high="green")
+histexamDataGeorge_lecturesNorm
+
+histexamDataGeorge_lecturesProb <- ggplot(data=examDataGeorge,aes(sample=lectures)) + 
+     stat_qq() + stat_qq_line(col = "Red")
+histexamDataGeorge_lecturesProb
+
+########################
+
+histexamDataGeorge_numeracy <- ggplot(data=examDataGeorge,aes(x=numeracy)) + 
+  geom_histogram(aes(fill=..count..),binwidth=1) +
+   ggtitle("Numeracy Scores") +
+   xlab("Number Achieved") + ylab("Number of Students") +
+   scale_fill_gradient("Number of Students", low="blue", high="green")
+histexamDataGeorge_numeracy
+
+histexamDataGeorge_numeracyNorm <- ggplot(data=examDataGeorge,aes(x=numeracy)) + 
+   geom_histogram(aes(y=..density.., fill=..count..), binwidth=1) +
+   stat_function(fun = dnorm, args=with(data=examData, c(mean = mean(numeracy), sd = sd(numeracy))))+
+   scale_x_continuous("numeracy") +
+   ggtitle("numeracy Normal Curve with Histogram") +
+   xlab("Number Achieved") + ylab("Density of Students") +
+   scale_fill_gradient("Density of Students", low="blue", high="green")
+histexamDataGeorge_numeracyNorm
+
+histexamDataGeorge_numeracyProb <- ggplot(data=examDataGeorge,aes(sample=numeracy)) + 
+     stat_qq() + stat_qq_line(col = "Red")
+histexamDataGeorge_numeracyProb
+
+histexamDataGeorge_stats <- ggplot(data=examDataGeorge,aes(x=stats)) + 
+  geom_histogram(aes(fill=..count..),binwidth=1) +
+  ggtitle("Stats Grades") +
+  xlab("Number Achieved") + ylab("Number of Students") +
+  scale_fill_gradient("Number of Students", low="blue", high="green")
+histexamDataGeorge_stats
+
+histexamDataGeorge_statsProb <- ggplot(data=examDataGeorge,aes(sample=stats)) + 
+  stat_qq() + stat_qq_line(col = "Red")
+histexamDataGeorge_statsProb
+```
+
+```{r echo=TRUE}
+#run statistics for each of the evaluations
+examStatsGeorge     <- stat.desc(examDataGeorge$exam, norm = TRUE)
+computerStatsGeorge <- stat.desc(examDataGeorge$computer, norm = TRUE)
+lecturesStatsGeorge <- stat.desc(examDataGeorge$lectures, norm = TRUE)
+numeracyStatsGeorge <- stat.desc(examDataGeorge$numeracy,norm = TRUE)
+statsStatsGeorge    <- stat.desc(examDataGeorge$stats,norm = TRUE)
+
+examStatsGeorge
+computerStatsGeorge
+lecturesStatsGeorge
+numeracyStatsGeorge
+statsStatsGeorge
+
+shapiro.test(examDataGeorge$exam)
+shapiro.test(examDataGeorge$computer)
+shapiro.test(examDataGeorge$lectures)
+shapiro.test(examDataGeorge$numeracy)
+shapiro.test(examDataGeorge$stats)
+
+```
+### What do the Professor George results show?
+
+First, a bit about the students themselves.
+1. 50 of the students in the cohort of 150 were in class with Professor George.
+2. Of those 50, 5 students do not have grades recorded (stats variable).
+
+The first thing that stands out for the Professor George cohort is that the numerical evaluation scores show a much more normal distribution within the cohort than for the overall student population. What this tells us is that the fact that Professor George is teaching the class has an effect on student performance. And being brutally honest, it appears that Professor George's teaching method is not a good enabler of student success. There are two results from the visuals that lead me to this conclusion:
+
+  1.  The three percentage-based histograms all center the normal curve around 50%, either slightly        above or below. The scores are not tightly grouped, with long and significant tails, but they        do all show a somewhat normal distribution. 
+  2.  The numeracy scores center around 4-5, with the highest result only be 8, out of 15. The             numeracy scores are skewed to the low end of the range, indicating that the students in general       did not do well on this evaluation.
+
+Additionally, looking at the final student grades within the Professor George cohort, there are two conclusions from the histogram.
+
+  1.  The grades distribution for this cohort looks very similar to that of the overall student            population, leading us to initially conclude that the final measure of student success is not        positively or negatively affected by Professor George's being the instructor.
+  2.  A high number of student (13 of 45 with grades) failed the class.
+
+Finally, looking at the statistics confirms the conclusions that I reached from the visual representations. 
+
+  1.  The means and medians confirm that the students performed less than admirably in this cohort,        while the standard deviations confirm the spread of the results.
+  2.  The skew and kurtosis values again confirm the results seen in the histograms.
+  3.  The Shapiro-Wilk tests for exam, computer, and lectures all confirm that their scores are all        normally distributed, while the same tests for numeracy and stats confirm that those scores are       not normally distributed. Again, this confirms what we are seeing graphically.
+
+
+##Now let's take a look at Professor Jeff's results.
+```{r examDataJeff, echo=TRUE}
+#subset the data for Professor Jeff
+examDataJeff  <- subset(examData, uni=="1",
+                         select=c("exam", "computer", "lectures", "numeracy", "stats"))
+str(examDataJeff)
+```
+```{r echo=FALSE}
+
+histexamDataJeff_exam <- ggplot(data=examDataJeff,aes(x=exam)) + 
+  geom_histogram(aes(fill=..count..),binwidth=1) +
+   ggtitle("Exam Scores") +
+   xlab("Percent Achieved") + ylab("Number of Students") +
+   scale_fill_gradient("Number of Students", low="blue", high="green")
+histexamDataJeff_exam
+
+histexamDataJeff_examNorm <- ggplot(data=examDataJeff,aes(x=exam)) + 
+   geom_histogram(aes(y=..density.., fill=..count..), binwidth=1) +
+   stat_function(fun = dnorm, args=with(data=examDataJeff, c(mean = mean(exam), sd = sd(exam)))) +
+   scale_x_continuous("exam") +
+   ggtitle("exam Normal Curve with Histogram") +
+   xlab("% Achieved") + ylab("Density of Students") +
+   scale_fill_gradient("Density of Students", low="blue", high="green")
+histexamDataJeff_examNorm
+
+histexamDataJeff_examProb <- ggplot(data=examDataJeff,aes(sample=exam)) + 
+     stat_qq() + stat_qq_line(col = "Red")
+histexamDataJeff_examProb
+
+###################
+
+histexamDataJeff_computer <- ggplot(data=examDataJeff,aes(x=computer)) + 
+  geom_histogram(aes(fill=..count..),binwidth=1) +
+   ggtitle("Computer Scores") +
+   xlab("Percent Achieved") + ylab("Number of Students") +
+   scale_fill_gradient("Number of Students", low="blue", high="green")
+histexamDataJeff_computer
+
+histexamDataJeff_computerNorm <- ggplot(data=examDataJeff,aes(x=computer)) + 
+   geom_histogram(aes(y=..density.., fill=..count..), binwidth=1) +
+   stat_function(fun = dnorm, args=with(data=examDataJeff, c(mean = mean(computer), sd = sd(computer)))) +
+   scale_x_continuous("computer") +
+   ggtitle("computer Normal Curve with Histogram") +
+   xlab("% Achieved") + ylab("Density of Students") +
+   scale_fill_gradient("Density of Students", low="blue", high="green")
+histexamDataJeff_computerNorm
+
+histexamDataJeff_computerProb <- ggplot(data=examDataJeff,aes(sample=computer)) + 
+     stat_qq() + stat_qq_line(col = "Red")
+histexamDataJeff_computerProb
+
+#########################
+
+histexamDataJeff_lectures <- ggplot(data=examDataJeff,aes(x=lectures)) + 
+  geom_histogram(aes(fill=..count..),binwidth=5) +
+   ggtitle("Lectures Scores") +
+   xlab("Percent Achieved") + ylab("Number of Students") +
+   scale_fill_gradient("Number of Students", low="blue", high="green")
+histexamDataJeff_lectures
+
+histexamDataJeff_lecturesNorm <- ggplot(data=examDataJeff,aes(x=lectures)) + 
+   geom_histogram(aes(y=..density.., fill=..count..), binwidth=5) +
+   stat_function(fun = dnorm, args=with(data=examData, c(mean = mean(lectures), sd = sd(lectures)))) +
+   scale_x_continuous("lectures") +
+   ggtitle("lectures Normal Curve with Histogram") +
+   xlab("% Achieved") + ylab("Density of Students") +
+   scale_fill_gradient("Density of Students", low="blue", high="green")
+histexamDataJeff_lecturesNorm
+
+histexamDataJeff_lecturesProb <- ggplot(data=examDataJeff,aes(sample=lectures)) + 
+     stat_qq() + stat_qq_line(col = "Red")
+histexamData_lecturesProb
+
+########################
+
+histexamDataJeff_numeracy <- ggplot(data=examDataJeff,aes(x=numeracy)) + 
+  geom_histogram(aes(fill=..count..),binwidth=1) +
+   ggtitle("Numeracy Scores") +
+   xlab("Number Achieved") + ylab("Number of Students") +
+   scale_fill_gradient("Number of Students", low="blue", high="green")
+histexamDataJeff_numeracy
+
+histexamDataJeff_numeracyNorm <- ggplot(data=examDataJeff,aes(x=numeracy)) + 
+   geom_histogram(aes(y=..density.., fill=..count..), binwidth=1) +
+   stat_function(fun = dnorm, args=with(data=examData, c(mean = mean(numeracy), sd = sd(numeracy))))+
+   scale_x_continuous("numeracy") +
+   ggtitle("numeracy Normal Curve with Histogram") +
+   xlab("Number Achieved") + ylab("Density of Students") +
+   scale_fill_gradient("Density of Students", low="blue", high="green")
+histexamDataJeff_numeracyNorm
+
+histexamDataJeff_numeracyProb <- ggplot(data=examDataJeff,aes(sample=numeracy)) + 
+     stat_qq() + stat_qq_line(col = "Red")
+histexamDataJeff_numeracyProb
+
+histexamDataJeff_stats <- ggplot(data=examDataJeff,aes(x=stats)) + 
+  geom_histogram(aes(fill=..count..),binwidth=1) +
+  ggtitle("Stats Grades") +
+  xlab("Number Achieved") + ylab("Number of Students") +
+  scale_fill_gradient("Number of Students", low="blue", high="green")
+histexamDataJeff_stats
+
+histexamDataJeff_statsProb <- ggplot(data=examDataJeff,aes(sample=stats)) + 
+  stat_qq() + stat_qq_line(col = "Red")
+histexamDataJeff_statsProb
+```
+```{r echo=TRUE}
+#run statistics for each of the evaluations
+examStatsJeff     <- stat.desc(examDataJeff$exam, norm = TRUE)
+computerStatsJeff <- stat.desc(examDataJeff$computer, norm = TRUE)
+lecturesStatsJeff <- stat.desc(examDataJeff$lectures, norm = TRUE)
+numeracyStatsJeff <- stat.desc(examDataJeff$numeracy,norm = TRUE)
+statsStatsJeff    <- stat.desc(examDataJeff$stats,norm = TRUE)
+
+examStatsJeff
+computerStatsJeff
+lecturesStatsJeff
+numeracyStatsJeff
+statsStatsJeff
+
+shapiro.test(examDataJeff$exam)
+shapiro.test(examDataJeff$computer)
+shapiro.test(examDataJeff$lectures)
+shapiro.test(examDataJeff$numeracy)
+shapiro.test(examDataJeff$stats)
+
+```
+###What do the Professor Jeff results show?
+
+First, a bit about the students themselves.
+1. 50 of the students in the cohort of 150 were in class with Professor Jeff.
+2. Unlike the Professor George cohort, all students in the Professor Jeff cohort have grades recorded (stats variable).
+
+Similarly to the Professor George cohort, the numerical evaluation score histograms generally show that being in class with Professor Jeff has an effect on student results, although this cohort's results are much more favorable than the previous one analyzed.
+
+  1.  The exam results are generally positive, with the mean in the high 70%'s, the range between          50-100%, and the data normally distributed. 
+  2.  The computer results are not as normally distributed, instead showing a significant left skew,       with only a few results to the right of the largest data groupings, which sit between 50-60%.        There are only a few results higher than 60%, and many below 50%.
+  3.  The lectures score are evenly distributed, with the vast majority between around 40-80%, but          without a normalized grouping around any range of values. Because of the way that the data is        distributed, I set the binwidth to 5, having the histogram draw its groupings in 5% sizes. This       makes the graph easier to read, confirming this conclusion.
+  4.  The numeracy scores center around 5, but differently from the previous cohort, several of            Professor Jeff's students did very well, scoring between 10 and 15. Again, though, the numeracy       scores are generally skewed to the low end of the range, indicating that the students in             general did not do well on this evaluation.
+
+Additionally, looking at the final student grades within the Professor Jeff cohort, there are two conclusions from the histogram.
+
+  1.  The grades distribution for this cohort looks somewhat similar to that of the overall student        population, leading us to initially conclude that the final measure of student success is not        positively or negatively affected by Professor Jeff's being the instructor. 
+  2.  A high number of student (12 of 50) failed the class.
+
+Finally, looking at the statistics confirms the conclusions that I reached from the visual representations. 
+
+  1.  The means and medians confirm that the students performed better in this cohort than the             previous one, with the exam and numeracy scores in particular being higher, while the standard       deviations confirm the spread of the results.
+  2.  The skew and kurtosis values again confirm the results seen in the histograms.
+  3.  The Shapiro-Wilk tests for exam, and lectures all confirm that their scores are                      normally distributed, while the same tests for computer, numeracy, and stats confirm that those       scores are not normally distributed. Again, this confirms what we are seeing graphically.
+
+##Finally, let's examine Professor Tushmann's results.
+```{r examDataTushmann, echo=TRUE}
+#subset the data for Professor Tushmann
+examDataTushmann  <- subset(examData, uni=="2",
+                         select=c("exam", "computer", "lectures", "numeracy", "stats"))
+str(examDataTushmann)
+```
+```{r echo=FALSE}
+histexamDataTushmann_exam <- ggplot(data=examDataTushmann,aes(x=exam)) + 
+  geom_histogram(aes(fill=..count..),binwidth=1) +
+   ggtitle("Exam Scores") +
+   xlab("Percent Achieved") + ylab("Number of Students") +
+   scale_fill_gradient("Number of Students", low="blue", high="green")
+histexamDataTushmann_exam
+
+histexamDataTushmann_examNorm <- ggplot(data=examDataTushmann,aes(x=exam)) + 
+   geom_histogram(aes(y=..density.., fill=..count..), binwidth=1) +
+   stat_function(fun = dnorm, args=with(data=examDataTushmann, c(mean = mean(exam), sd = sd(exam)))) +
+   scale_x_continuous("exam") +
+   ggtitle("exam Normal Curve with Histogram") +
+   xlab("% Achieved") + ylab("Density of Students") +
+   scale_fill_gradient("Density of Students", low="blue", high="green")
+histexamDataTushmann_examNorm
+
+histexamDataTushmann_examProb <- ggplot(data=examDataTushmann,aes(sample=exam)) + 
+     stat_qq() + stat_qq_line(col = "Red")
+histexamData_examProb
+
+###################
+
+histexamDataTushmann_computer <- ggplot(data=examDataTushmann,aes(x=computer)) + 
+  geom_histogram(aes(fill=..count..),binwidth=1) +
+   ggtitle("Computer Scores") +
+   xlab("Percent Achieved") + ylab("Number of Students") +
+   scale_fill_gradient("Number of Students", low="blue", high="green")
+histexamDataTushmann_computer
+
+histexamDataTushmann_computerNorm <- ggplot(data=examDataTushmann,aes(x=computer)) + 
+   geom_histogram(aes(y=..density.., fill=..count..), binwidth=1) +
+   stat_function(fun = dnorm, args=with(data=examDataTushmann, c(mean = mean(computer), sd = sd(computer)))) +
+   scale_x_continuous("computer") +
+   ggtitle("computer Normal Curve with Histogram") +
+   xlab("% Achieved") + ylab("Density of Students") +
+   scale_fill_gradient("Density of Students", low="blue", high="green")
+histexamDataTushmann_computerNorm
+
+histexamDataTushmann_computerProb <- ggplot(data=examDataTushmann,aes(sample=computer)) + 
+     stat_qq() + stat_qq_line(col = "Red")
+histexamDataTushmann_computerProb
+
+#########################
+
+histexamDataTushmann_lectures <- ggplot(data=examDataTushmann,aes(x=lectures)) + 
+  geom_histogram(aes(fill=..count..),binwidth=1) +
+   ggtitle("Lectures Scores") +
+   xlab("Percent Achieved") + ylab("Number of Students") +
+   scale_fill_gradient("Number of Students", low="blue", high="green")
+histexamDataTushmann_lectures
+
+histexamDataTushmann_lecturesNorm <- ggplot(data=examDataTushmann,aes(x=lectures)) + 
+   geom_histogram(aes(y=..density.., fill=..count..), binwidth=1) +
+   stat_function(fun = dnorm, args=with(data=examDataTushmann, c(mean = mean(lectures), sd = sd(lectures)))) +
+   scale_x_continuous("lectures") +
+   ggtitle("lectures Normal Curve with Histogram") +
+   xlab("% Achieved") + ylab("Density of Students") +
+   scale_fill_gradient("Density of Students", low="blue", high="green")
+histexamDataTushmann_lecturesNorm
+
+histexamDataTushmann_lecturesProb <- ggplot(data=examDataTushmann,aes(sample=lectures)) + 
+     stat_qq() + stat_qq_line(col = "Red")
+histexamDataTushmann_lecturesProb
+
+########################
+
+histexamDataTushmann_numeracy <- ggplot(data=examDataTushmann,aes(x=numeracy)) + 
+  geom_histogram(aes(fill=..count..),binwidth=1) +
+   ggtitle("Numeracy Scores") +
+   xlab("Number Achieved") + ylab("Number of Students") +
+   scale_fill_gradient("Number of Students", low="blue", high="green")
+histexamDataTushmann_numeracy
+
+histexamDataTushmann_numeracyNorm <- ggplot(data=examDataTushmann,aes(x=numeracy)) + 
+   geom_histogram(aes(y=..density.., fill=..count..), binwidth=1) +
+   stat_function(fun = dnorm, args=with(data=examDataTushmann, c(mean = mean(numeracy), sd = sd(numeracy))))+
+   scale_x_continuous("numeracy") +
+   ggtitle("numeracy Normal Curve with Histogram") +
+   xlab("Number Achieved") + ylab("Density of Students") +
+   scale_fill_gradient("Density of Students", low="blue", high="green")
+histexamDataTushmann_numeracyNorm
+
+histexamDataTushmann_numeracyProb <- ggplot(data=examDataTushmann,aes(sample=numeracy)) + 
+     stat_qq() + stat_qq_line(col = "Red")
+histexamDataTushmann_numeracyProb
+
+histexamDataTushmann_stats <- ggplot(data=examDataTushmann,aes(x=stats)) + 
+  geom_histogram(aes(fill=..count..),binwidth=1) +
+  ggtitle("Stats Grades") +
+  xlab("Number Achieved") + ylab("Number of Students") +
+  scale_fill_gradient("Number of Students", low="blue", high="green")
+histexamDataTushmann_stats
+
+histexamDataTushmann_statsProb <- ggplot(data=examDataTushmann,aes(sample=stats)) + 
+  stat_qq() + stat_qq_line(col = "Red")
+histexamDataTushmann_statsProb
+```
+```{r echo=TRUE}
+#run statistics for each of the evaluations
+examStatsTushmann     <- stat.desc(examDataTushmann$exam, norm = TRUE)
+computerStatsTushmann <- stat.desc(examDataTushmann$computer, norm = TRUE)
+lecturesStatsTushmann <- stat.desc(examDataTushmann$lectures, norm = TRUE)
+numeracyStatsTushmann <- stat.desc(examDataTushmann$numeracy,norm = TRUE)
+statStatsTushmann     <- stat.desc(examDataTushmann$stats,norm = TRUE)
+
+examStatsTushmann
+computerStatsTushmann
+lecturesStatsTushmann
+numeracyStatsTushmann
+statStatsTushmann
+
+shapiro.test(examDataTushmann$exam)
+shapiro.test(examDataTushmann$computer)
+shapiro.test(examDataTushmann$lectures)
+shapiro.test(examDataTushmann$numeracy)
+shapiro.test(examDataTushmann$stats)
+
+```
+### What do the Professor Tushmann results show?
+
+First, a bit about the students themselves.
+  1.  50 of the students in the cohort of 150 were in class with Professor Tushmann.
+  2.  Of those 50, 5 students do not have grades recorded (stats variable).
+
+Similarly to the Professor George cohort, the numerical evaluation score histograms generally show that being in class with Professor Jeff has an effect on student results, although this cohort's results are much more favorable than the previous one analyzed.
+
+  1.  The exam results are mixed, in that they appear to center around 45-55%, but their spread is         large across the results, with results ranging from 20% to nearly 90%. The results appear to         skew a bit on the lower end, with more below than above 50%. 
+  2.  The computer scores show a bit of an opposite distribution from the exam results, in that the        results are skewed right versus left. The spread only goes from 20-60%, and the scores center        around 32%. Overall, not good results for this evaluation.
+  3.  The lectures scores are evenly distributed across the entire spectrum of possible results, from       0-100%. While the number of scores between 60% and 70& is a bit higher than the remainder of         the range, it doesn't appear to be significant.
+  4.  Numeracy scores for the cohort are not exceptionally good, with values at 4 and below                comprising half of the results, and high score only 9. The distribution has a longer right           tail, simply because there are more possible values between 4 and 9 than there are between 1         and 4. 
+  
+Additionally, looking at the final student grades within the Professor Tushmann cohort, there are two conclusions from the histogram.
+
+  1.  The grades distribution for this cohort looks somewhat similar to that of the overall student        population, leading us to initially conclude that the final measure of student success is not        positively or negatively affected by Professor Tushmann's being the instructor. 
+  2.  A high number of student (13 of 45 with grades recorded) failed the class.
+
+Finally, looking at the statistics confirms the conclusions that I reached from the visual representations. 
+
+  1.  The means and medians confirm that the students performed better in this cohort than the             previous one, with the exam and numeracy scores in particular being higher, while the standard       deviations confirm the spread of the results.
+  2.  The skew and kurtosis values again confirm the results seen in the histograms.  
+  3.  The Shapiro-Wilk tests for exam, computer, and lectures all confirm that their scores are             normally distributed, while the same tests for numeracy and stats confirm that those                 scores are not normally distributed. Again, this confirms what we are seeing graphically.
+  
+## The Next Step:  Professor Comparisons
+
+While there is interest in seeing how the students in each professor's section have performed, another, it is natural for me to want to compare how the professors have influenced the results of the students in their cohorts. In order to do so, we must make one assumption, that being that each of the student cohorts are representative of the student population at large, and there is not a bias in any of the cohorts. Practically, that would mean that the students were randomly assigned to their cohort, and that they had an equal chance of being assigned to each professor.  While we don't absolutely know that this was the case, I will stipulate this for purposes of the analysis.
+
+I will look at each of the 5 variables to determine if there are student performance differences between the professors, using box plots to visualize the data, and summary statistics to provide numerical verification of what we are seeing in the graphs. 
+
+### First, the graphs
+
+```{r echo=FALSE}
+#define the profUni factor to enable us to show
+#the professor name as the label of the x axis
+#and the summary statistics
+
+profUni <- factor(examData$uni, levels=c(0:2), labels=c("George","Jeff","Tushmann"))
+
+ggplot(data=examData, mapping = aes(x=profUni, y=exam)) + 
+  geom_boxplot() +
+  ggtitle("Professor Exam Comparison") +
+  xlab("Professor") + ylab("Exam Scores")
+
+ggplot(data=examData, mapping = aes(x=profUni, y=computer)) + 
+  geom_boxplot() +
+  ggtitle("Professor Computer Comparison") +
+  xlab("Professor") + ylab("Computer Scores")
+
+ggplot(data=examData, mapping = aes(x=profUni, y=lectures)) + 
+  geom_boxplot() +
+  ggtitle("Professor Lecture Comparison") +
+  xlab("Professor") + ylab("Lectures Scores")
+
+ggplot(data=examData, mapping = aes(x=profUni, y=numeracy)) + 
+  geom_boxplot() +
+  ggtitle("Professor Numeracy Comparison") +
+  xlab("Professor") + ylab("Numeracy Scores")
+
+ggplot(data=examData, mapping = aes(x=profUni, y=stats)) + 
+  geom_boxplot() +
+  ggtitle("Professor Grade Comparison") +
+  xlab("Professor") + ylab("Grades")
+```
+
+### Now, the summary statistics
+
+```{r echo=TRUE}
+describeBy(examData$exam, list(profUni),mat=TRUE,digits=3)
+describeBy(examData$computer, list(profUni),mat=TRUE,digits=3)
+describeBy(examData$lectures, list(profUni),mat=TRUE,digits=3)
+describeBy(examData$numeracy, list(profUni),mat=TRUE,digits=3)
+describeBy(examData$stats, list(profUni),mat=TRUE,digits=3)
+```
+### So how do the professors compare to each other, in terms of student performance?
+
+####Exam
+
+The exam scores are significantly different between the professors. Jeff's students did by far the best, followed by Tushmann's, and then George's. The box plot graph clearly shows this visually, and the summary statistics reinforce this conclusion. Jeff's students have by far the highest mean score, at 76%, while Tushmann's and George's are 52% and 40%, respectively. Additionally, the minimum score in the Jeff cohort is 56%, which is higher than the MEAN score in either of the other two cohorts.
+
+####Computer
+
+The computer scores for George and Jeff are similar, while the Tushmann scores lag behind the other two. The distributions of scores between George and Jeff are bit different, with Jeff's middle 50% of scores more tightly grouped in the 3rd quartile, while George's are more evenly distributed. But their ranges are similar (excluding Jeff's outliers at each end of the range), and their means are within 1.5% of each other. The Jeff scores have a left skew, as we can see both in the box plot and with the skew value (-0.506), while the George ones have a slight right skew (0.212). Given these results, Jeff comes out slightly ahead in student performance, but not by much, compared to George.
+
+####Lectures and Numeracy
+
+The lectures and numeracy scores show only slight differences between the professors, with Jeff's scores a bit better than the others, and the George and Tushmann scores identically distributed. Given this result, were I to have access to the actual professors and students, I would want to take a deeper look at how these results were generated, but given what we have, we have to accept the results as is. 
+
+####Stats (Grades)
+
+None of the professors excels in the distributions of their final student grades. Again, the George and Tushmann grade distributions are identical, and the Jeff distribution shows only a marginal improvement. While the numerical representations of the grades are integers, it is appropriate in this case to treat the variables as continuous, versus categorical, so that we can compare the results between the cohorts. As the box plots show, Jeff had slightly fewer students fail, otherwise it is difficult to separate cohort performance. The summary statistics reinforce this conclusion, as the mean, skew, and kurtosis results (of the cohorts) are all within 0.15 of each other. If the final grade is the determining factor in measuring the student success by who taught, the professors do not separate from each other, and I can conclude that the choice of professor is not material to the student's final grade.
+
+##Final Note
+
+One final note that I would like call out is that the assignment called for me to do any data transformations, as I felt appropriate. As the above analysis shows, I did not perform any transformations on the data, because I did not feel that doing so would provide me with any information that would significantly enhance my analysis and understanding of student performance, where the variables did not conform to a normal distribution. 
+
+The only real data anomalies that I found were in the cases where the George and Tushmann results yielded identical summary statistics, and I feel that attempting to normalize those scores would not gain insights that would lead to any useful conclusions.

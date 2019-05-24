@@ -1,0 +1,39 @@
+My project will be related to my current role at Johnson & Johnson. I manage the teams that support all of the digital assets (web, ecommerce, and mobile applications) for J&J, ensuring that they are operating efficiently, and taking care of any issues or upsets. We refer to all of the digital assets as applications.
+
+The teams have three main functions:
+
+1. Responding to and resolving any issues with the apps, and also answering all requests that our business and IT partners have with them. The issues are commonly called incidents, and the other activities are called service requests. In ITIL terminology, this is called Service Operations.
+
+2. Monitoring application performance and providing improvements to make them run more efficiently. We call these Continuous Service Improvement activities, or CSI.
+
+3. Monitoring platform performance and providing improvements to improve platform reliability, performance, and uptime. We refer to these activities as Reliability.
+
+The first function can be thought of as non-discretionary activities, that we have to do, while that latter two are both discretionary and value-add. Responding to incidents and service requests keeps the sites up and operational, while CSI and Reliability activities make things better for our business partners. In managing our support teams across all of J&J, our goal is to minimize the time/cost spent on Service Operations, enabling us to utilize our time and resources for CSI and Reliability activities.
+
+We do a lot of data analysis on our Service Ops tickets, looking for patterns and trends to help us to eliminate tickets through things like automation and user self-service, but one area that we are currently lacking is identifying the factors that cause our team to take longer times to resolve the tickets. We have a metric called Time To Resolve (TTR) for each ticket, and we evaluate our performance over time with the metric Mean Time To Resolve (MTTR), which is simply the mean TTR value for all tickets over the time period being reviewed.
+
+The goal of my project will be to identify the controllable factors which most affect the TTR for tickets, so that we can plan and implement internal team operating improvements which will help us to be more efficient in responding to, and resolving, tickets. 
+
+I will have two data sources, one each a csv file download of the incidents and service requests that my team has done since September, 2018. I have selected that date because we recently signed new contracts with our support vendor partners that took effect then. The contracts incent the partners differently than the previous contracts, so I will be measuring our performance under the new contracts only. I have already downloaded the files, from our Performance Metrics dashboards, which are Tableau dashboards.
+
+I anticipate using the following packages, as a minimum:
+
+boot -- bootstrapping the data, if necessary
+pastecs -- numerous statistics
+ggplot2 -- graphs
+MASS -- various statistical functions
+survey -- correlation analysis
+readr -- reading and importing the data sets.
+
+Some areas of concern are as follows:
+
+1. Missing and outlier data. There are tickets which are not resolved for weeks or months, due to extraordinary circumstances. I will need to decide whether to include or exclude these tickets, for my analysis.
+
+2. Because of the data volume (around 3,000 incidents and 13,000 SR's), I will need to figure out the best way of visualizing the data to gain insights.
+
+3. There will be many categories to slice the data for analysis, and I will need to figure out which categories are individually significant, and also if there are potentially interactions between multiple categories whose interactions have effects on the TTR.
+
+I'm looking forward to executing the project and providing the results to my team to take actions on.
+ 
+
+
