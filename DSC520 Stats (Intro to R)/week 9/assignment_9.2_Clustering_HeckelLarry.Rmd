@@ -1,0 +1,191 @@
+---
+title: "Assigment 9.2 Clustering"
+author: "Larry Heckel"
+date: May 11, 2019
+output: html_document
+
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Assignment 9.2 Instructions
+
+Labeled data is not always available. For these types of datasets, you can use unsupervised algorithms to extract structure. The k-means clustering algorithm and the k nearest neighbor algorithm both use the Euclidean distance between points to group data points. The difference is the k-means clustering algorithm does not use labeled data.
+
+In this problem, you will use the k-means clustering algorithm to look for patterns in an unlabeled dataset. The dataset for this problem is found at data/clustering-data.csv.
+
+  a. Plot the dataset using a scatter plot.
+
+  b. Fit the dataset using the k-means algorithm from  k=2 to k=12. Create a scatter plot of the
+  resultant clusters for each value of k.
+
+  c. As k-means is an unsupervised algorithm, you cannot compute the accuracy as there are no
+  correct values to compare the output to. Instead, you will use the average distance from the
+  center of each cluster as a measure of how well the model fits the data. To calculate this
+  metric, simply compute the distance of each data point to the center of the cluster it is
+  assigned to and take the average value of all of those distances.
+
+      Calculate this average distance from the center of each cluster for each value of k and plot
+      it as a line chart where k is the x-axis and the average distance is the y-axis.
+
+  d. One way of determining the “right” number of clusters is to look at the graph of k versus
+  average distance and finding the “elbow point”. Looking at the graph you generated in the
+  previous example, what is the elbow point for this dataset?
+
+```{r echo=TRUE}
+# libraries to use
+library(ggplot2)
+# library(readxl)
+# library(DataExplorer)
+# library(ggm)
+library(readr)
+# library(dplyr)
+# # library(stringr)
+# # library(psych)
+# # library(janitor)
+# library(car)
+# library(QuantPsyc)
+# # library(pastecs)
+# # library(sqldf)
+#library(caret)
+#library(class)
+library(factoextra)
+library(purrr)
+
+options(scipen=100)
+options(digits=5)
+
+# read the data files
+clusterData <- read_csv("clustering-data.csv")
+set.seed(1206)
+```
+##Plot the dataset using a scatter plot.
+```{r echo=FALSE}
+ggplot(data = clusterData) +
+  aes(x = x, y = y) +
+  geom_point(color = '#0c4c8a') +
+  labs(title = 'Cluster Data',
+    x = 'X data',
+    y = 'Y data') +
+  theme_grey()
+```
+##Fit the dataset using the k-means algorithm from  k=2 to k=12. Create a scatter plot of the resultant clusters for each value of k.
+
+### Cluster k=2
+```{r echo=TRUE}
+k2 <- kmeans(clusterData, centers=2, nstart=25)
+str(k2)
+k2
+k2_graph <- fviz_cluster(k2, clusterData)
+k2_graph
+```
+
+### Cluster k=3
+```{r echo=TRUE}
+k3 <- kmeans(clusterData, centers=3, nstart=25)
+str(k3)
+k3
+k3_graph <- fviz_cluster(k3, clusterData)
+k3_graph
+```
+
+### Cluster k=4
+```{r echo=TRUE}
+k4 <- kmeans(clusterData, centers=4, nstart=25)
+str(k4)
+k4
+k4_graph <- fviz_cluster(k4, clusterData)
+k4_graph
+```
+
+### Cluster k=5
+```{r echo=TRUE}
+k5 <- kmeans(clusterData, centers=5, nstart=25)
+str(k5)
+k5
+k5_graph <- fviz_cluster(k5, clusterData)
+k5_graph
+```
+
+### Cluster k=6
+```{r echo=TRUE}
+k6 <- kmeans(clusterData, centers=6, nstart=25)
+str(k6)
+k6
+k6_graph <- fviz_cluster(k6, clusterData)
+k6_graph
+```
+
+### Cluster k=7
+```{r echo=TRUE}
+k7 <- kmeans(clusterData, centers=7, nstart=25)
+str(k7)
+k7
+k7_graph <- fviz_cluster(k7, clusterData)
+k7_graph
+```
+
+### Cluster k=8
+```{r echo=TRUE}
+k8 <- kmeans(clusterData, centers=8, nstart=25)
+str(k8)
+k8
+k8_graph <- fviz_cluster(k8, clusterData)
+k8_graph
+```
+
+### Cluster k=9
+```{r echo=TRUE}
+k9 <- kmeans(clusterData, centers=9, nstart=25)
+str(k9)
+k9
+k9_graph <- fviz_cluster(k9, clusterData)
+k9_graph
+```
+
+### Cluster k10
+```{r echo=TRUE}
+k10 <- kmeans(clusterData, centers=10, nstart=25)
+str(k10)
+k10
+k10_graph <- fviz_cluster(k10, clusterData)
+k10_graph
+```
+
+### Cluster k=11
+```{r echo=TRUE}
+k11 <- kmeans(clusterData, centers=11, nstart=25)
+str(k11)
+k11
+k11_graph <- fviz_cluster(k11, clusterData)
+k11_graph
+```
+
+### Cluster k=12
+```{r echo=TRUE}
+k12 <- kmeans(clusterData, centers=12, nstart=25)
+str(k12)
+k12
+k12_graph <- fviz_cluster(k12, clusterData)
+k12_graph
+```
+
+##Calculate this average distance from the center of each cluster for each value of k and plot it as a line chart where k is the x-axis and the average distance is the y-axis.
+```{r echo=TRUE}
+# create function to compute average within-cluster sum of squares
+withinSumSq <- function(k) {kmeans(clusterData, k, nstart=10)$tot.withinss/4022}
+
+#set the values of k, from 2-12
+kValues <- 2:12
+
+#compute the within Sum of Squares for 2-12 clusters
+withinSSValues <- map_dbl(kValues, withinSumSq)
+
+#plot the line chart of k-value versus Sum of Squares
+plot(kValues, withinSSValues, type="b", pch=19, frame=FALSE,
+     xlab="Number of Clusters K", ylab="Average within-clusters Sum of Squares")
+```
+##One way of determining the “right” number of clusters is to look at the graph of k versus average distance and finding the “elbow point”. Looking at the graph you generated in the previous example, what is the elbow point for this dataset?
+
+The elbow point appears to be k=5, based on the graph.
