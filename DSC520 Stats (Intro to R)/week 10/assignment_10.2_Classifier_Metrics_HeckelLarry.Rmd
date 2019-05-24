@@ -1,0 +1,151 @@
+---
+title: "10.2 Assignment: Classifier Metrics"
+author: "Larry Heckel"
+date: May 13, 2019
+output: html_document
+
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Assignment 10.2
+
+In most cases, when you fit a supervised learning model, you will want to split your dataset into two parts. One dataset is for training your model and the other one is for testing.
+
+Using the dataset from the previous example, split the data into two datasets with the training dataset containing 80% of the data and the testing dataset containing 20%. There are more advanced ways of splitting the dataset using methods such as k-fold cross validation, but those will not be used in this problem.
+
+Fit the training data to a logistic regression model using the glm() function and use the test data to calculate the following classifier metrics.
+
+# Assignment 10.2 Instructions:
+
+Include all of your answers in a R Markdown report. An example can be found here that you can use as a guide.
+
+a. Calculate precision, recall, and F1 score for your model using the test dataset.
+
+b. Plot the receiver operating characteristic (ROC) curve using the test dataset. Additionally, calculate the area under the curve (AUC) value.
+
+c. Consider the case where you fit a logistic regression model. When you calculate the classifier metrics, you get an accuracy of 96%, but an AUC of 53%. Is this a good predictive model? Explain why or not.
+
+```{r echo=TRUE}
+# libraries to use
+library(ggplot2)
+# library(readxl)
+# library(DataExplorer)
+# library(ggm)
+#library(readr)
+library(dplyr)
+# # library(stringr)
+# # library(psych)
+# # library(janitor)
+# library(car)
+# library(QuantPsyc)
+# # library(pastecs)
+# # library(sqldf)
+library(caret)
+#library(class)
+library(factoextra)
+library(purrr)
+library(farff)
+library(MLmetrics)
+
+options(scipen=100)
+options(digits=5)
+
+# read the file
+thorSurgery <- readARFF("ThoraricSurgery.arff")
+glimpse(thorSurgery)
+set.seed(1206)
+```
+## Using the dataset from the previous example, split the data into two datasets with the training dataset containing 80% of the data and the testing dataset containing 20%. There are more advanced ways of splitting the dataset using methods such as k-fold cross validation, but those will not be used in this problem.
+```{r echo=TRUE}
+#create the training and test sets
+thorSplit <- createDataPartition(y=thorSurgery$Risk1Yr, p=0.8, list = FALSE)
+thorTraining <-thorSurgery[thorSplit,]
+thorTesting <- thorSurgery[-thorSplit,]
+glimpse(thorTraining)
+glimpse(thorTesting)
+```
+
+## Fit the training data to a logistic regression model using the glm() function and use the test data to calculate the following classifier metrics.
+```{r echo=TRUE}
+#create the model with the training data set
+thorTrainModel <- glm(Risk1Yr ~ ., data = thorTraining, family = "binomial")
+summary(thorTrainModel)
+
+#find the probabilities of every observation in the test data set
+thorTesting$modelProb <- predict(thorTrainModel, thorTesting, type="response")
+
+#Pick my decision threshold and set the 1's and 0's
+thorTesting <- thorTesting %>% mutate(modelPredict = 1*(modelProb > .55) +0,
+                                      diedBinary = 1*(Risk1Yr=="F") + 0)
+glimpse(thorTesting)
+
+true_pos <- (thorTesting$diedBinary==1) & (thorTesting$modelPredict==1)
+true_neg <- (thorTesting$diedBinary==0) & (thorTesting$modelPredict==0)
+false_pos <- (thorTesting$diedBinary==0) & (thorTesting$modelPredict==1)
+false_neg <- (thorTesting$diedBinary==1) & (thorTesting$modelPredict==0)
+
+confMatrix <- matrix(c(sum(true_pos), sum(false_pos),
+                       sum(false_neg), sum(true_neg)),
+                     2,2)
+colnames(confMatrix) <- c('Yhat=1', 'Yhat=0')
+rownames(confMatrix) <- c('Y = 1', 'Y = 0')
+confMatrix
+
+regrAccuracy <- (sum(true_pos)+sum(true_neg)) / (sum(true_pos)+sum(true_neg)+sum(false_pos)+sum(false_neg))
+regrAccuracy
+```
+
+## Calculate precision, recall, and F1 score for your model using the test dataset.
+
+Precision is calculated as the (Sum of True Positive) / (Sum of True Positive + Sum of False Positive)
+```{r echo=TRUE}
+precision <- sum(true_pos) / (sum(true_pos) + sum(false_pos))
+precision
+```
+The precision is 84.946%.
+
+Recall is calculated as the (Sum of True Positive) / (Sum of True Positive + Sum of False Negative)
+```{r echo=TRUE}
+modRecall <- sum(true_pos) / (sum(true_pos) + sum(false_neg))
+modRecall
+```
+The recall is 98.75%.
+
+F1 score is a measure of the test's accuracy, and it is the harmonic average of the precision and the recall.
+```{r echo=TRUE}
+modF1Score <- F1_Score(thorTesting$diedBinary, thorTesting$modelPredict, positive = 1)
+modF1Score
+```
+The F1 score is 91.329%.
+
+## Plot the receiver operating characteristic (ROC) curve using the test dataset. 
+
+The ROC curve plots recall on the y-axis against specificity on the x-axis. The ROC curve shows the trade-off between recall and sensitivity as I change the cutoff to determine how to classify a record. The cutoff that I used above is 0.55, and the results that I obtained are unique to that cutoff value. 
+```{r echo=TRUE}
+#compute and graph the ROC curve
+idx <- order(-thorTesting$modelProb)
+recall <- cumsum(true_pos[idx]==1)/sum(true_pos==1)
+specif <- (sum(true_pos==0) - cumsum(true_pos[idx]==0))/sum(true_pos==0)
+roc_df <- data.frame(recall=recall, specificity=specif)
+ggplot(roc_df, aes(x=specificity, y=recall)) +
+        geom_line(color='blue') +
+        scale_x_reverse(expand=c(0,0)) +
+        scale_y_continuous(expand=c(0,0)) +
+        geom_line(data=data.frame(x=(0:100/100)), aes(x=x, y=1-x),linetype='dotted', color='red')
+```
+## Additionally, calculate the area under the curve (AUC) value.
+```{r echo=TRUE}
+modAUC <- sum(roc_df$recall[-1] * diff(1-roc_df$specificity))
+modAUC
+```
+The diagonal line on the ROC graph represents a completely ineffective classifier, with an area under the curve (AUC) value of 0.5. A perfect classifier has an AUC of 1. 
+
+The computed AUC value is .61266, which means that this model is not a particularly strong classifier. 
+
+## Consider the case where you fit a logistic regression model. When you calculate the classifier metrics, you get an accuracy of 96%, but an AUC of 53%. Is this a good predictive model? Explain why or not.
+
+A predictive model with these metrics is not a good predictive model, generally speaking. One circumstance in which this combination of metrics may occur is when there is a class imbalance in the training data set. For example, if the possible outcome values are 0 or 1, a balanced training set would have a relatively equal number of 0's and 1's, while a class imbalance would indicate an over-abundance of one of the values, compared to the other. This is actually what is present in the assignment data set, where the "T" values in the Risk1Yr outcome variable constitute only about 21% of the data set. Such a split of values makes it difficult to correctly classify for that outcome, because there just are not that many cases to work from.
+
+The AUC is insensitive to class imbalance, so in such a scenario, it better represents the validity of the classifier model.

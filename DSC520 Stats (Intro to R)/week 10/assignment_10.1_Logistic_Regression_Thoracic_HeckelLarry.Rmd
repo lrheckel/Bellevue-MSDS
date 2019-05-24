@@ -1,0 +1,110 @@
+---
+title: "10.1 Assignment: Fit a Logistic Regression Model to the Thoracic Surgery Binary Dataset"
+author: "Larry Heckel"
+date: May 13, 2019
+output: html_document
+
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#Assignment 10.1
+
+For this problem, you will be working with the thoracic surgery data set from the University of California Irvine machine learning repository. This dataset contains information on life expectancy in lung cancer patients after surgery.
+
+The underlying thoracic surgery data is in ARFF format. This is a text-based format with information on each of the attributes. You can load this data using a package such as foreign or by cutting and pasting the data section into a CSV file.
+
+#Assignment Instructions:
+
+Include all of your answers in a R Markdown report. An example can be found here that you can use as a guide.
+
+a.  Fit a binary logistic regression model to the data set that predicts whether or not the patient survived for one year (the Risk1Y variable) after the surgery. Use the glm() function to perform the logistic regression. See Generalized Linear Models for an example. Include a summary using the summary() function in your results.
+
+b. According to the summary, which variables had the greatest effect on the survival rate?
+
+c. To compute the accuracy of your model, use the dataset to predict the outcome variable. The percent of correct predictions is the accuracy of your model. What is the accuracy of your model?
+
+```{r echo=TRUE}
+# libraries to use
+#library(ggplot2)
+# library(readxl)
+# library(DataExplorer)
+# library(ggm)
+#library(readr)
+library(dplyr)
+# # library(stringr)
+# # library(psych)
+# # library(janitor)
+# library(car)
+# library(QuantPsyc)
+# # library(pastecs)
+# # library(sqldf)
+#library(caret)
+#library(class)
+#library(factoextra)
+#library(purrr)
+library(foreign)
+library(farff)
+
+options(scipen=100)
+options(digits=5)
+
+# read the data file
+# read the file
+thorSurgery <- readARFF("ThoraricSurgery.arff")
+glimpse(thorSurgery)
+```
+##Fit a binary logistic regression model to the data set that predicts whether or not the patient survived for one year (the Risk1Y variable) after the surgery. Use the glm() function to perform the logistic regression. See Generalized Linear Models for an example. Include a summary using the summary() function in your results.
+```{r echo=TRUE}
+#run the generalized linear model
+logRegrThorSurgrel <- glm(Risk1Yr ~ ., data = thorSurgery, family = "binomial")
+
+#compute the summary
+summary(logRegrThorSurgrel)
+```
+
+##According to the summary, which variables had the greatest effect on the survival rate?
+
+The variables with the greatest effect on the survival rate are those with p-values that are less than .05, and there are 6 of those. I will list them in order of effect, greatest to least.
+
+1. DGN variable with the value of DGNDGN5 has a p-value of 0.00032, indicating the greatest effect on the survival rate. The DGN variable indicates codes for the tumor(s) found, although the available documentation doesn't provide the specific diagnosis for this code.
+
+2. PRE9 variable, which indicates the presence of Dyspnoea before surgery. The "F" value, indicating no Dyspnoea, has a p-value of 0.00494.
+
+3. PRE14 variable, with the value of OC14, has a p-value of 0.00668. This variable gives the size of the original tumor, with OC14 being rated the largest size.
+
+4. DGN variable with the value of DGNDGN8 has a p-value of 0.01296. Same commentary for the DGN variable above, regarding the meaning.
+
+5. PRE30 variable, which indicates if the patient is a smoker. The "F" value, indicating not a smoker, has a p-value of 0.02984.
+
+6. PRE17 variable, which indicates whether the patient has Type 2 diabetes. The "F" value, indicating no diabetes, has a p-value of 0.0379.
+
+##To compute the accuracy of your model, use the dataset to predict the outcome variable. The percent of correct predictions is the accuracy of your model. What is the accuracy of your model?
+
+```{r echo=TRUE}
+#find the probabilities of every observation in the model
+thorSurgery$modelProb <- predict(logRegrThorSurgrel, thorSurgery, type="response")
+
+#Pick my decision threshold and set the 1's and 0's
+thorSurgery <- thorSurgery %>% mutate(modelPredict = 1*(modelProb > .55) +0,
+                                      diedBinary = 1*(Risk1Yr=="F") + 0)
+glimpse(thorSurgery)
+
+#create the confusion matrix manually
+true_pos <- (thorSurgery$diedBinary==1) & (thorSurgery$modelPredict==1)
+true_neg <- (thorSurgery$diedBinary==0) & (thorSurgery$modelPredict==0)
+false_pos <- (thorSurgery$diedBinary==0) & (thorSurgery$modelPredict==1)
+false_neg <- (thorSurgery$diedBinary==1) & (thorSurgery$modelPredict==0)
+
+confMatrix <- matrix(c(sum(true_pos), sum(false_pos),
+                       sum(false_neg), sum(true_neg)),
+                       2,2)
+colnames(confMatrix) <- c('Yhat=1', 'Yhat=0')
+rownames(confMatrix) <- c('Y = 1', 'Y = 0')
+confMatrix
+
+regrAccuracy <- (sum(true_pos)+sum(true_neg)) / (sum(true_pos)+sum(true_neg)+sum(false_pos)+sum(false_neg))
+regrAccuracy
+```
+The model's accuracy is 83.83%.
