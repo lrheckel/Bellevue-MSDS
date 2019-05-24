@@ -1,0 +1,277 @@
+---
+title: "11.1 Assignment: A/B Testing and Conversion Rates"
+author: "Larry Heckel"
+date: May 18, 2019
+output: html_document
+
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Assignment 11.1 Instructions
+
+Read What Is A/B Testing?, Optipedia
+
+Read Analyzing conversion rates with Bayes Rule, Chris Stucchio, 2013
+
+Read Bayesian Bandits - optimizing click throughs with statistics, Chris Stucchio, 2013
+
+A/B testing is a statistical technique commonly used in applications and on websites to compare two options against one another. As an example, a company might test two versions of an advertisement and to determine which version has a higher click-through rate.
+
+The utility of A/B testing is not limited to advertising and web development. A/B testing techniques can apply to learning analytics (which content do students prefer?) and medicine (which treatment is more effective?).
+
+In simple A/B testing we compare the success rate of two different test cases. We model each test case using the Bernoulli distribution. The Bernoulli distribution has one parameter, which is the probability of success in each trial. Our goal is to determine which test case, A or B, has the higher probability of success.
+
+You can run A/B tests using traditional, frequentist statistical techniques such as the student t-test. Using these techniques, you run your tests until you have enough data to compare the two groups and then run the test to see if the means of the two groups are different.
+
+Bayesian methods provide a powerful alternative to frequentist statistical tests. Using Bayesian methods, you create a full probability distribution for each case you are testing (e.g., A or B in this case). Before you collect any data, you assign a prior distribution to each case. For example, you might assume A and B are equally likely and assign a success rate based on prior data. There are other ways to set prior distributions, but we will not go into them in great detail. After setting the prior distribution, you create a posterior distribution by updating the prior distribution with evidence.
+
+There are different methods we can use to create a posterior probability distribution for each test case based on the evidence we have gathered. In this situation, you will use a conjugate prior to creating the posterior distribution.
+
+Recall, that in this problem, you will estimate the probability distributions for two different test cases to determine whether the success rate of one case is higher than the success rate of the other. We will use the conjugate prior of the Bernoulli distribution as our posterior distribution. The conjugate prior of the Bernoulli distribution is the Beta distribution.
+
+The posterior probability distribution for each case is given by the conjugate prior of the Bernoulli distribution, the Beta distribution. If you have successes out of data points, the probability distribution for, the probability of success, is given by P(p) = Beta(k + 1,n - k + 1).
+
+Don’t worry too much if the terminology and concepts are unclear at this point. For the purpose of this assignment, all you need to understand is that you want to estimate the probability of success, p for each case. Instead of just estimating a point value (e.g., the probability of success is 50%), you will use a probability distribution for the value p.
+
+# Assignment Instructions:
+
+a.  Using the Beta distribution and the probability function P(p) = Beta(k + 1,n - k + 1),  plot the probability distributions for the following values.
+
+No data collected. k = 0, n = 0.
+k = 2, n = 2
+k = 4, n = 15 
+k = 132, n = 500
+
+b.  In the previous part of this problem, you plotted the probability distribution for different values of k (number of successes) and n (number of trials). Based on these plots, provide your best estimate of the success rate.
+
+c. Load the data from ab_test.csv. Using all the data, plot probability distribution for the test case A and B on the same plot. Based on these plots, which one has the higher conversion rates?
+
+d. Using the qbeta function (quantile function of the Beta function) calculate the 95% confidence interval (i.e., quantiles between 2.5% and 97.5%) for A and B. See An intuitive interpretation of the beta distribution for an example of computing the confidence interval.
+
+e. Finally, you will examine what the distributions would like at different points during the data collection process. Repeat steps c  and d, but only include data on or before the date provided.
+
+On or before 2009-09-01
+On or before 2009-10-15
+On or before 2009-12-24
+
+```{r echo=TRUE}
+# library(ggplot2)
+# # library(readxl)
+# #library(DataExplorer)
+# # library(ggm)
+library(readr)
+library(dplyr)
+# # # library(stringr)
+# # # library(psych)
+# # # library(janitor)
+# # library(car)
+# # library(QuantPsyc)
+# # # library(pastecs)
+# # # library(sqldf)
+# #library(esquisse)
+# #library(FNN)
+# library(caret)
+# # library(class)
+# library(factoextra)
+# library(purrr)
+# library(farff)
+# library(MLmetrics)
+
+options(scipen=100)
+options(digits=5)
+
+
+```
+
+## Using the Beta distribution and the probability function P(p) = Beta(k + 1,n - k + 1),  plot the probability distributions for the following values.
+
+### No data collected. k = 0, n = 0.
+```{r echo=TRUE}
+p = seq(0,1, length=100)
+# No data collected. k = 0, n = 0.
+k=0
+n=0
+plot(p, dbeta(p, (k+1), (n-k+1)), ylab="density", type ="l", col="blue")
+```
+
+### k = 2, n = 2
+```{r echo=TRUE}
+k=2
+n=2
+plot(p, dbeta(p, (k+1), (n-k+1)), ylab="density", type ="l", col="blue")
+```
+
+# k = 4, n = 15 
+```{r echo=TRUE}
+k=4
+n=15
+plot(p, dbeta(p, (k+1), (n-k+1)), ylab="density", type ="l", col="blue")
+```
+
+### k = 132, n = 500
+```{r echo=TRUE}
+k=132
+n=500
+plot(p, dbeta(p, (k+1), (n-k+1)), ylab="density", type ="l", col="blue")
+```
+
+## In the previous part of this problem, you plotted the probability distribution for different values of k (number of successes) and n (number of trials). Based on these plots, provide your best estimate of the success rate.
+```{r echo=TRUE}
+resultFrame <- data.frame(n = c(0,2,15,500), k = c(0,2,4,132))
+str(resultFrame)
+probSuccess = sum(resultFrame$k)/sum(resultFrame$n)
+probSuccess
+
+succRateEst <- binom.test(2, 2, probSuccess)
+succRateEst
+succRateEst <- binom.test(4, 15, probSuccess)
+succRateEst
+succRateEst <- binom.test(132, 500, probSuccess)
+succRateEst
+```
+The success rate, from all of the trials, is the sum of the successes divided by the sum of the trials. This value is 0.26692.
+
+From the graphs, we can see that each subsequent one converges at around 0.26, and the computed 95% confidence intervals tighten around that value, with the graph becoming more of a peak, versus a data spread. 
+
+## Load the data from ab_test.csv. Using all the data, plot probability distribution for the test case A and B on the same plot. Based on these plots, which one has the higher conversion rates?
+```{r echo=FALSE}
+# read the data files
+abTest <- read_csv("ab_test.csv")
+glimpse(abTest)
+
+p = seq(0,1, length=100)
+
+# using subset function 
+Bdata <- subset(abTest, label=="B")
+Adata <- subset(abTest, label=="A")
+
+#get the numbers for A and B trials and successes
+bSuccess <- sum(Bdata$is_success)
+bSuccess
+bTrials <- nrow(Bdata)
+bTrials
+
+aSuccess <- sum(Adata$is_success)
+aSuccess
+aTrials <- nrow(Adata)
+aTrials
+
+#plot the two distibutions on the same graph
+plot(p, dbeta(p, aSuccess+1, aTrials-aSuccess+1), ylab="density", type ="l", col="blue")
+lines(p, dbeta(p, bSuccess+1, bTrials-bSuccess+1), type ="l", col="red")
+legend(0.2,50, c("Be(A)","Be(B)"),lty=c(1,1),col=c("blue", "red"))
+```
+Based on the plot, Label B has the higher conversion rate, a bit higher than 0.2.
+
+## Using the qbeta function (quantile function of the Beta function) calculate the 95% confidence interval (i.e., quantiles between 2.5% and 97.5%) for A and B. See An intuitive interpretation of the beta distribution for an example of computing the confidence interval.
+```{r echo=TRUE}
+#95% CI for Label A
+qbetaA <- qbeta( c(0.025, 0.975), aSuccess+1, aTrials-aSuccess+1)
+qbetaA
+
+#95% CI for Label B
+qbetaB <- qbeta( c(0.025, 0.975), bSuccess+1, bTrials-bSuccess+1)
+qbetaB
+
+```
+## Finally, you will examine what the distributions would like at different points during the data collection process. Repeat steps c  and d, but only include data on or before the date provided.
+
+### On or before 2009-09-01
+```{r echo=TRUE}
+Bdata1 <- subset(Bdata, as.Date(Bdata$timestamp) <= as.Date("2009-09-01"))
+glimpse(Bdata1)
+
+Adata1 <- subset(Adata, as.Date(Adata$timestamp) <= as.Date("2009-09-01"))
+glimpse(Adata1)
+
+#get the numbers for A and B trials and successes
+bSuccess1 <- sum(Bdata1$is_success)
+bSuccess1
+bTrials1 <- nrow(Bdata1)
+bTrials1
+
+aSuccess1 <- sum(Adata1$is_success)
+aSuccess1
+aTrials1 <- nrow(Adata1)
+aTrials1
+
+#plot the two distibutions on the same graph
+plot(p, dbeta(p, aSuccess1+1, aTrials1-aSuccess1+1), ylab="density", type ="l", col="blue")
+lines(p, dbeta(p, bSuccess1+1, bTrials1-bSuccess1+1), type ="l", col="red")
+legend(0.2,50, c("Be(A)","Be(B)"),lty=c(1,1),col=c("blue", "red"))
+
+#95% CI for Label A
+qbetaA <- qbeta( c(0.025, 0.975), aSuccess1+1, aTrials1-aSuccess1+1)
+qbetaA
+
+#95% CI for Label B
+qbetaB1 <- qbeta( c(0.025, 0.975), bSuccess1+1, bTrials1-bSuccess1+1)
+qbetaB1
+```
+
+### On or before 2009-10-15
+```{r echo=TRUE}
+Bdata2 <- subset(Bdata, as.Date(Bdata$timestamp) <= as.Date("2009-10-15"))
+glimpse(Bdata2)
+
+Adata2 <- subset(Adata, as.Date(Adata$timestamp) <= as.Date("2009-10-15"))
+glimpse(Adata2)
+
+#get the numbers for A and B trials and successes
+bSuccess2 <- sum(Bdata2$is_success)
+bSuccess2
+bTrials2 <- nrow(Bdata2)
+bTrials2
+
+aSuccess2 <- sum(Adata2$is_success)
+aSuccess2
+aTrials2 <- nrow(Adata2)
+aTrials2
+
+#plot the two distibutions on the same graph
+plot(p, dbeta(p, aSuccess2+1, aTrials2-aSuccess2+1), ylab="density", type ="l", col="blue")
+lines(p, dbeta(p, bSuccess2+1, bTrials2-bSuccess2+1), type ="l", col="red")
+legend(0.2,50, c("Be(A)","Be(B)"),lty=c(1,1),col=c("blue", "red"))
+
+#95% CI for Label A
+qbetaA2 <- qbeta( c(0.025, 0.975), aSuccess2+1, aTrials2-aSuccess2+1)
+qbetaA2
+
+#95% CI for Label B
+qbetaB2 <- qbeta( c(0.025, 0.975), bSuccess2+1, bTrials2-bSuccess2+1)
+qbetaB2
+```
+### On or before 2009-12-24
+```{r echo=TRUE}
+Bdata3 <- subset(Bdata, as.Date(Bdata$timestamp) <= as.Date("2009-12-24"))
+glimpse(Bdata3)
+
+Adata3 <- subset(Adata, as.Date(Adata$timestamp) <= as.Date("2009-12-24"))
+glimpse(Adata3)
+
+#get the numbers for A and B trials and successes
+bSuccess3 <- sum(Bdata3$is_success)
+bSuccess3
+bTrials3 <- nrow(Bdata3)
+bTrials3
+
+aSuccess3 <- sum(Adata3$is_success)
+aSuccess3
+aTrials3 <- nrow(Adata3)
+aTrials3
+
+#plot the two distibutions on the same graph
+plot(p, dbeta(p, aSuccess3+1, aTrials3-aSuccess3+1), ylab="density", type ="l", col="blue")
+lines(p, dbeta(p, bSuccess3+1, bTrials3-bSuccess3+1), type ="l", col="red")
+legend(0.2,50, c("Be(A)","Be(B)"),lty=c(1,1),col=c("blue", "red"))
+
+#95% CI for Label A
+qbetaA3 <- qbeta( c(0.025, 0.975), aSuccess3+1, aTrials3-aSuccess3+1)
+qbetaA3
+
+#95% CI for Label B
+qbetaB3 <- qbeta( c(0.025, 0.975), bSuccess3+1, bTrials3-bSuccess3+1)
+qbetaB3
+```

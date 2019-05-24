@@ -1,0 +1,29 @@
+@Michael Gonzalez#9261  and other folks, I'll try here to outline what I did for 11.1, because the readings are not great in guiding us through the assignment, in my opinion. You may agree or disagree with how I approached the assignment, but hopefully this will be helpful.
+
+For the first part of the assignment, it's pretty straightforward, just input the k and n values into the formula and plot the graph. The idea is that we see how the graph changes over time, as more success/failure information comes in. Here is the code that I used:
+
+### No data collected. k = 0, n = 0.
+```{r echo=TRUE}
+p = seq(0,1, length=100)
+# No data collected. k = 0, n = 0.
+k=0
+n=0
+plot(p, dbeta(p, (k+1), (n-k+1)), ylab="density", type ="l", col="blue")
+```
+
+Just run this 4 times, with the different k and n values.
+
+For the second part, here is the link that I used for the binomial test. What I did was create a data frame to sum the successes and failures, to gett the overall probabiility of success, and then run the binomial tests for each success/failure counts scenario. 
+
+http://www.instantr.com/2012/11/06/performing-a-binomial-test/
+
+```{r echo=TRUE}
+resultFrame <- data.frame(n = c(0,2,15,500), k = c(0,2,4,132))
+str(resultFrame)
+probSuccess = sum(resultFrame$k)/sum(resultFrame$n)
+probSuccess
+
+succRateEst <- binom.test(2, 2, probSuccess)
+succRateEst
+
+
