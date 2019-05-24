@@ -1,0 +1,368 @@
+---
+title: "Assigment 6.2 Housing Data"
+author: "Larry Heckel"
+date: April 14 2019
+output: html_document
+  
+  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Assignment 6.2 Housing Data
+
+Work with your previously assigned team members on this assignment. Data for this assignment is focused on real estate transactions recorded from 1964 to 2016 and can be found in Week 6 Housing.xlsx. Using your skills in statistical correlation, regression and R programming, you are interested in the following variables:  Sale Price and Square Footage of Lot.
+
+a. Examine the data set visually and numerically. Are there missing data? Does that data contain outliers? Explain how you will handle missing data and outliers so you have a clean
+data set going forward.
+
+b. Construct scatter plots for the variables in R studio and place the best-fit linear regression line on each scatterplot. Describe the relationship between the variables in each plot.
+
+c. Use R to calculate the covariance of the two variables and provide an explanation of why you would use this calculation and what the results indicate.
+
+d. Choose the type of correlation test to perform, explain why you chose this test, and make a prediction if the test yield a positive or negative correlation?
+
+e. Perform a correlation analysis of the variables and describe what the calculations in the
+correlation matrix suggest about the relationship between the variables. Be specific with your explanation.
+
+f. Calculate the correlation coefficient and the coefficient of determination, describe what you conclude about the results.
+
+g. Based on your analysis what can you say about the relationship between the variables?
+
+h. Produce an appropriate graph for the variables. Use R Markdown to report, critique and discuss the skewness and any significant scores found.
+
+i. Perform a partial correlation, controlling  for Bedrooms and Square Feet Total Living. Explain how this changes your interpretation and explanation of the results.
+
+j. Choose Square Footage of Lot as the Predictor and Sale Price as the Outcome and perform a regression analysis.
+
+k. What are the intercept and the slope? What are the coefficient of determination and the correlation coefficient?
+
+l. For this model, what variation exists. Be specific in your response.
+
+m. Based on the calculated F-Ratio does this regression model result in a better prediction of the sale price than if you had chosen to use the mean value of square footage of lot?
+
+n. Use the model to make a prediction of your choice. Explain the values you use in the model and the resulting prediction as well as how someone might benefit from using this model.
+
+
+## Assignment
+
+```{r echo=TRUE}
+#libraries to use
+library(ggplot2)
+library(readxl)
+library(DataExplorer)
+library(ggm)
+
+options(scipen=100)
+options(digits=2)
+
+# read the files
+housing <- read_excel("week-6-housing.xlsx")
+head(housing)
+
+```
+
+###a. Examine the data set visually and numerically. Are there missing data? Does that data contain outliers? Explain how you will handle missing data and outliers so you have a clean data set going forward.
+```{r echo=TRUE}
+#check for missing values
+plot_missing(housing)
+```
+    1. First, for the missing data. As the plot_missing() function shows, the two variables         "ctyname" and "sale_warning" have significant numbers of missing values, but I don't         believe at this time that their being missing will have any effect on the required
+        analysis.
+
+    2. Next, we'll take a look at histograms of the two variables of interest. 
+    
+        a. For Sale Price, the data looks fairly normally distributed, but with an exceptionally long
+            right tail. Above about $2 million, there just are not many data points, although there is
+            a small spike at about $3.2 million. To test for outliers, what I will do is create a 
+            subset of data with sale prices of $2 million and below, and as I work through the 
+            required analyses, compare its results with the full data set, to see if there are any
+            substantial effects from removing the data, and therefore how to interpret the results.
+            
+        b. Looking at Lot Size, a few exceptionally large lots make the data distribution difficult
+            to view, so I've redone the histogram as the log10 of the lot size, which makes for a much
+            better view. The distribution is cleary multi-modal, with 4 distinct spikes, but I don't
+            see any outliers in this view, so I'll keep all of the data.
+```{r echo=FALSE}
+ggplot(data = housing) +
+  aes(x = `Sale Price`) +
+  geom_histogram(bins = 50, fill = '#0c4c8a') +
+  theme_minimal()
+
+ggplot(data = housing) +
+  aes(x = sq_ft_lot) +
+  geom_histogram(bins = 42, fill = '#0c4c8a') +
+  theme_minimal()
+
+ggplot(data = housing) +
+  aes(x = log10(sq_ft_lot)) +
+  geom_histogram(bins = 42, fill = '#0c4c8a') +
+  theme_minimal()
+```
+Below is the data subset, with Sale Prices above $2 million excluded.
+
+For the remainder, I will refer to the data sets as:
+
+      housing:        The full data set.
+      housingPrice:   Data set of sale prices $2 million and below.
+```{r echo=TRUE}
+housingPrice <- subset(housing, `Sale Price` <= 2000000)
+head(housingPrice)
+```
+```{r echo=FALSE}
+str(housing)
+str(housingPrice)
+```
+In filtering the high sale prices, I've taken 206 observations away, which is about 1.6%
+  of the data set. Observation counts are as follows:
+  
+  housing:       12,865
+  housingPrice:  12,659.
+  
+###b. Construct scatterplots for the variables in R studio and place the best-fit linear regression line on each scatterplot. Describe the relationship between the variables in each plot.
+```{r echo=FALSE}
+#housing
+ggplot(data = housing) +
+  aes(x = log10(sq_ft_lot), y = `Sale Price`) +
+  geom_point(color = '#0c4c8a') +
+  geom_smooth(method=lm, span = 0.75) +
+  labs(title = 'Housing Graph',
+    x = 'Square Footage',
+    y = 'Sale Price') +
+  theme_minimal()
+
+#housingPrice
+ggplot(data = housingPrice) +
+  aes(x = log10(sq_ft_lot), y = `Sale Price`) +
+  geom_point(color = '#0c4c8a') +
+  geom_smooth(method=lm, span = 0.75) +
+  labs(title = 'Housing Price Graph',
+       x = 'Square Footage',
+       y = 'Sale Price') +
+  theme_minimal()
+```
+The two plots appear similar, with a slightly positive relationship between Lot Square
+  Footage and Sale Price. Additionally, although the y-axis scales on the two graphs are
+  not the same, the regression line appears to be about the same in each, starting at
+  about $500,000 and going between the same two data points on the right, just before
+  the 6 value on the x-axis. This visual inspection points to a hypothesis that removing
+  these data points will not have an effect on the overall relationship, and we will
+  examine that in the following sections and requirements.
+  
+###c. Use R to calculate the covariance of the two variables and provide an explanation of why you would use this calculation and what the results indicate.
+```{r echo=TRUE}
+housingCov <- cov(log10(housing$sq_ft_lot), housing$`Sale Price`, method="pearson")
+housingPriceCov <- cov(log10(housingPrice$sq_ft_lot), housingPrice$`Sale Price`, method="pearson")
+housingCov
+housingPriceCov
+```
+The two covariances indicate a positive relationship between lot size and sale price.
+  Because the two measurements have the same scale, it is possible to compare them
+  directly. The covariance of the housingPrice is about 13% higher than that of the
+  housing data, indicating that the higher priced houses have a negative effect on the
+  relationship between the two variables. This seems a bit intuitive, as we could see from
+  the scatter plots, as the observations removed ranged across almost the entire range of 
+  the lot size, so their inclusion would have the effect of lowering the relationship's
+  numerical value.
+  
+###d. Choose the type of correlation test to perform, explain why you chose this test, and make a prediction if the test yield a positive or negative correlation?
+
+The appropriate correlation test to perform in this instance is the Spearman test. The 
+  reason for choosing this test, versus the Pearson test, is that the latter assumes that
+  the data is normally distributed, and both data elements are not, in this case. While
+  the Sale Price appears to be normally distributed, the log10 of the Lot Size is not,
+  as shown in the histogram. That graph show four distinct peaks, so it is clearly not
+  normally distributed.
+  
+I predict that the test will yield a positive correlation.
+
+###e. Perform a correlation analysis of the variables and describe what the calculations in the correlation matrix suggest about the relationship between the variables. Be specific with your explanation.
+```{r echo=TRUE}
+#spearman correlation test
+housingSpear <- cor.test(log10(housing$sq_ft_lot), housing$`Sale Price`, method = "spearman")
+housingPriceSpear <- cor.test(log10(housingPrice$sq_ft_lot), housingPrice$`Sale Price`, method = "spearman")
+housingSpear
+housingPriceSpear
+```
+The correlation test for both data sets yields a small positive correlation, with
+  housing=0.16 and housingPrice=0.18. This suggests that sale price and lot size have some
+  positive relationship, but it is not a strong one. Additionally, with the p-value < 0.001,
+  we can reject the null hypothesis that the true rho is equal to 0. Finally, a note on
+  the magnitude of the two rho values. With the high sale value observations removed,
+  we again see a slightly higher correlation between the lot size and sale price, similar
+  to the covariance calculation. While the increase is only 0.02 in absolute terms,
+  it is still 12.5% of the housing rho value, so it is somewhat significant in comparison.
+
+###f. Calculate the correlation coefficient and the coefficient of determination, describe what you conclude about the results.
+```{r echo=TRUE}
+#correlation and coeff of determination
+housingCor <- cor(log10(housing$sq_ft_lot),housing$`Sale Price`, method = "spearman")
+housingCoefDet <- cor(log10(housing$sq_ft_lot),housing$`Sale Price`, method = "spearman")^2
+housingPriceCor <- cor(log10(housingPrice$sq_ft_lot),housingPrice$`Sale Price`, method = "spearman")
+housingPriceCoefDet <- cor(log10(housingPrice$sq_ft_lot),housingPrice$`Sale Price`, method = "spearman")^2
+
+housingCor
+housingPriceCor
+housingCoefDet
+housingPriceCoefDet
+```
+As noted in the prior test, the housing and housingPrice correlation coefficient, using
+  the Spearman test are small and similar, with the housingPrice a bit higher correlated,
+  with the high value houses removed from the data set.
+  
+The coefficients of determination of the two data sets are very small, with housing=0.026
+  and housingPrice=0.031. This measurement tells us how much variability is shared by
+  the two variables. For the complete data set (housing), only 2.6% of the variability
+  is shared, while the smaller data set only yields a 3.1% shared variability. Those
+  results show that about 97% of the variability of the two factors is accounted for by
+  other variables.
+  
+###g. Based on your analysis what can you say about the relationship between the variables?
+
+While the two variables have a weak positive relationship, I would suggest that looking at
+  factors other than the lot size will yield ones with a higher correlation to the sale
+  price.
+  
+###h. Produce an appropriate graph for the variables. Use R Markdown to report, critique and discuss the skewness and any significant scores found.
+
+```{r echo=FALSE}
+#housing
+ggplot(data = housing) +
+  aes(x = log10(sq_ft_lot), y = `Sale Price`) +
+  geom_point(color = '#0c4c8a') +
+  labs(title = 'Housing Graph',
+       x = 'Square Footage',
+       y = 'Sale Price') +
+  theme_minimal()
+
+#housingPrice
+ggplot(data = housingPrice) +
+  aes(x = log10(sq_ft_lot), y = `Sale Price`) +
+  geom_point(color = '#0c4c8a') +
+  labs(title = 'Housing Price Graph',
+       x = 'Square Footage',
+       y = 'Sale Price') +
+  theme_minimal()
+```
+
+The two scatter plots are similar, so my comments here will apply to both, except where noted.
+
+The vast majority of houses sell for less than $1 million, and those that do appear to be
+  fairly equally distributed above and below $500,000. As recalled from the lot size
+  histogram, we can see the 4 peaks of the lot size distribution, and the price ranges
+  around each of them. The lowest three peaks skew sale price lower, while the rightmost
+  peak shows a more spread distribution of prices.
+  
+In practical terms, it appears that there are 4 general (or standard) lot size categories,
+  and the square footage only varies a bit from low to high within each of the standard
+  sizes. 
+
+###i. Perform a partial correlation, controlling for Bedrooms and Square Feet Total Living. Explain how this changes your interpretation and explanation of the results.
+```{r echo=TRUE}
+#partial correlation
+housingPcor <- pcor(c('Sale Price',"sq_ft_lot", "bedrooms","square_feet_total_living"),var(housing))
+housingPricePcor <- pcor(c('Sale Price',"sq_ft_lot", "bedrooms","square_feet_total_living"),var(housingPrice))
+housingPcor
+housingPricePcor
+housingPcor^2
+housingPricePcor^2
+```
+Controlling for Bedrooms and Square Feet Total Living, the relationship between lot size
+  and sale price goes down significantly. From the original correlation of 0.16, the
+  housing correlation goes down to 0.01, and the the housingPrice correlation goes down
+  from 0.18 to -0.056. Of most significance is in the latter, that the correlation
+  changed from positive to negative, indicating that, with the high priced houses
+  removed from the data set, lot size and sale price are slightly negatively correlated.
+  
+Of even more significance are the coefficients of determination, with both being less than
+  1%. This indicates that in both data sets, with the effects of Bedrooms and Living Area
+  controlled for, lot size and sale price share less than 1% in each other's variability.
+  This analysis shows that while sale price and lot size share some variation, there
+  are other factors that are far more important in their variability.
+
+
+###j. Choose Square Footage of Lot as the Predictor and Sale Price as the Outcome and perform a regression analysis.
+```{r echo=TRUE}
+#regression analysis
+housingRegr <- lm(`Sale Price` ~ sq_ft_lot, data=housing)
+housingPriceRegr <- lm(`Sale Price` ~ sq_ft_lot, data=housingPrice)
+housingRegr
+housingPriceRegr
+summary(housingRegr)
+summary(housingPriceRegr)
+sqrt(0.0144) #housing corr coeff
+sqrt(0.0154) #housingPrice corr coeff
+```
+
+###k. What are the intercept and the slope? What are the coefficient of determination and the correlation coefficient?
+
+	            housing	    housingPrice
+Slope	          0.851	      0.586
+Y-intercept	  641821.406	608263.293
+Correl Coeff	  0.12	      0.12
+Coeff of Det	  0.0144      0.0154
+
+
+###l. For this model, what variation exists. Be specific in your response.
+
+Basically, both the housing and housingPrice models are telling us that the lot size
+  (in square feet) has very little overall effect on the sale price, as indicated by
+  the two slope values. For both models, the y-intercept is well over $600,000, meaning
+  that, for the (theoretical) lot size of 0 square feet, the sale price predicted would
+  be in the neighborhood of $641,000 (housing) or $608,000 (housingPrice). Each additional
+  square foot in the lot adds less than $1 to the sale price, being 85.1 cents in the
+  housing model and 58.6 cents in the housingPrice model. 
+
+###m. Based on the calculated F-Ratio does this regression model result in a better prediction of the sale price than if you had chosen to use the mean value of square footage of lot?
+
+The F-Statistic is another measurement of the relationship between the outcome and 
+  predictor variables. When there is no relationship between the two, we expect the
+  F-Statistic to have a value close to 1. Given that the two F-Statistics are 187 and
+  198, we conclude that there is a relationship between the variables. Additionally, as
+  the p-value in both models is less than 0.001, we reject the null hypothesis that 
+  choosing the mean value of the square footage of lot would have resulted in a better
+  prediction model.
+
+###n. Use the model to make a prediction of your choice. Explain the values you use in the model and the resulting prediction as well as how someone might benefit from using this model.
+
+What I am going to do is test the two models to predict the Sale Price for a house sitting
+  on an average-sized lot. I will simply compute the lot size and sale price means for
+  each of the two data sets, then I will plug the mean lot size values into each model,
+  and compare the sale prices to the data set mean. This should give me a decent view
+  on how good the models are at predicting the sale price.
+```{r echo=TRUE}
+#Sale Price averages
+housingSaleMean <- mean(housing$`Sale Price`)
+housingPriceSaleMean <- mean(housingPrice$`Sale Price`)
+
+#Get the model results
+housingModelSale <- mean(housing$sq_ft_lot)*0.851 + 641821.406
+housingPriceModelSale <- mean(housingPrice$sq_ft_lot)*0.586 + 608263.293
+
+#how good are the results
+housingSaleMean
+housingModelSale
+
+
+housingPriceSaleMean
+housingPriceModelSale
+```
+As we can see from the results, both of the models are pretty good at predicting the 
+  sale price from the lot size, with the overall data set prediction being exactly the
+  same as the average price, while the data set with the high priced houses is only 
+  different by $4.00. 
+  
+The benefit in using this model would be in providing a buyer with a target price to look
+  for, based on the size of the lot that the house sits on. It is not to say that there
+  might not be some variability in the actual price, but the buyer would have a good
+  understanding of about what the sale price should be.
+  
+One last comment on the usefulness of the analysis. The data set contains a good number
+  of variables that would make good predictors for the housing sale price. Zip code, 
+  house size (square footage), and number of bedrooms would all be good predictors to take
+  a look at, either individually or in combination. While this week's focus is linear
+  regression, this seems like it would be a good data set for a multiple regression
+  analysis.
+
