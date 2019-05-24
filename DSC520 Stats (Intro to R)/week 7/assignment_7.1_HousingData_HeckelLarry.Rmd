@@ -1,0 +1,342 @@
+---
+title: "Assigment 7.1 Housing Data"
+author: "Larry Heckel"
+date: April 26, 2019
+output: html_document
+
+
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Assignment 7.1 Instructions
+
+Work individually on this assignment. You are encouraged to collaborate on ideas and strategies pertinent to this assignment. Data for this assignment is focused on real estate transactions recorded from 1964 to 2016 and can be found in Week 7 Housing.xlsx. Using your skills in statistical correlation, multiple regression and R programming, you are interested in the following variables:  Sale Price and several other possible predictors.
+
+Using your ‘clean’ data set from the previous week complete the following: 
+  
+a. Explain why you choose to remove data points from your ‘clean’ dataset.
+
+b. Create two variables; one that will contain the variables Sale Price and Square Foot of Lot (same variables used from previous assignment on simple regression) and one that will contain Sale Price, Bedrooms, and Bath Full Count as predictors. 
+
+c. Execute a summary() function on two variables defined in the previous step to compare the model results. What are the R2 and Adjusted R2 statistics?  Explain what these results tell you about the overall model. Did the inclusion of the additional predictors help explain any large variations found in Sale Price?
+
+d. Considering the parameters of the multiple regression model you have created. What are the standardized betas for each parameter and what do the values indicate?
+
+e. Calculate the confidence intervals for the parameters in your model and explain what the results indicate.
+
+f. Assess the improvement of the new model compared to your original model (simple regression model) by testing whether this change is significant by performing an analysis of variance.
+
+g. Perform casewise diagnostics to identify outliers and/or influential cases, storing each functions output in a dataframe assigned to a unique variable name.
+
+h. Calculate the standardized residuals using the appropriate command, specifying those that are +-2, storing the results of large residuals in a variable you create.
+
+i. Use the appropriate function to show the sum of large residuals.
+
+j. Which specific variables have large residuals (only cases that evaluate as TRUE)?
+
+k. Investigate further by calculating the leverage, cooks distance, and covariance rations. Comment on all cases that are problematics.
+
+l. Perform the necessary calculations to assess the assumption of independence and state if the condition is met or not.
+
+m. Perform the necessary calculations to assess the assumption of no multicollinearity and state if the condition is met or not.
+
+n. Visually check the assumptions related to the residuals using the plot() and hist() functions. Summarize what each graph is informing you of and if any anomalies are present.
+
+o. Overall, is this regression model unbiased?  If an unbiased regression model, what does this tell us about the sample vs. the entire population model?
+
+```{r echo=TRUE}
+#libraries to use
+library(ggplot2)
+library(readxl)
+library(DataExplorer)
+library(ggm)
+# library(readr)
+library(dplyr)
+# library(stringr)
+# library(psych)
+# library(janitor)
+library(car)
+library(QuantPsyc)
+# library(pastecs)
+# library(sqldf)
+
+options(scipen=100)
+options(digits=2)
+```
+First, read in the data and check for any missing values.
+```{r echo=TRUE}
+# read the files
+housing <- read_excel("week-7-housing.xlsx")
+glimpse(housing)
+
+plot_missing(housing)
+```
+There is nothing unusual about the data, and the two variables with missing data, ctyname and sale_warning, are not required for the analysis, so we can start with the full data set.
+
+There are 4 variables that this analysis will be concerned with, so next we'll take a look at the distribution of those variables.
+
+First, for the outcome variable, Sale Price. 
+```{r echo=FALSE}
+ggplot(data = housing) +
+  aes(x = `Sale Price`) +
+  geom_histogram(bins = 50, fill = '#0c4c8a') +
+  theme_grey()
+```
+
+The histogram looks relatively normally distributed, with a long and sparse right tail, above about $2 million. For now, I will keep all of the data, but I'll want to take a look at the high value homes, to see if they are either outliers or are highly influencing the model results.
+
+Next, we will look at the sq_ft_lot variable, which is the square footage of the lot that the house sits on, which I will call lot size.
+```{r echo=FALSE}
+ggplot(data = housing) +
+  aes(x = sq_ft_lot) +
+  geom_histogram(bins = 50, fill = '#0c4c8a') +
+  theme_grey()
+```
+```{r echo=TRUE}
+summary(housing$sq_ft_lot)
+```
+
+The lot size values are tightly grouped at the lower end of the histogram, but there are a number of extraordinarily large lots that skew the data. Because the histogram is difficult to read and interpret, I ran summary statistics and see that the median is only 7,965, but the mean is 22,229, meaning that the very large lots are significant in the data set. It may be appropriate, given the data's range and recognition that I want to keep the large values, to work with the log10 of the lot size in the analysis, so I'll run the histogram and see how that looks. 
+```{r echo=FALSE}
+ggplot(data = housing) +
+  aes(x = log10(sq_ft_lot)) +
+  geom_histogram(bins = 50, fill = '#0c4c8a') +
+  theme_grey()
+```
+
+The log10 distribution looks more workable for this analysis, so I'll keep it that way. The data is not normally distributed, having 4 distinct peaks, but it's also not so spread out that we will have difficulty working with it.
+
+Next I'll look at the number of full baths.
+```{r echo=FALSE}
+ggplot(data = housing) +
+  aes(x = bath_full_count) +
+  geom_histogram(bins = 30, fill = '#0c4c8a') +
+  theme_grey()
+```
+
+The x-axis of the histogram goes out past 20, but with few, if any data points, so I'll take a look at the counts of the data values using the dplyr package.
+```{r echo=TRUE}
+dplyr::count(housing, bath_full_count)
+str(filter(housing, bath_full_count == 23))
+```
+
+As the data shows, there is one house with 23 full baths, and no other house with more than 6 baths. A closer look at the 23 bath house appears that this might be a data error. There are 4 bedrooms and 5,060 square feet of living space, so I suspect that the true value is either 2 or 3. 
+
+Given that this appears to be a data input error, and I don't have the tools to look up the house in question and find what I would believe would be the correct value, I will treat this as an outlier and remove it from the data set.
+
+Finally, I'll look at the number of bedrooms.
+```{r echo=FALSE}
+ggplot(data = housing) +
+  aes(x = bedrooms) +
+  geom_histogram(bins = 30, fill = '#0c4c8a') +
+  theme_grey()
+```
+
+Similar to full baths, the bedroom data seems to have a bit of a right skew, although not as pronounced as the full baths. I'll take a look at the counts here also, to see if that shows anything interesting.
+```{r echo=TRUE}
+dplyr::count(housing, bedrooms)
+```
+
+The number of bedrooms goes up to 11, and while the tail drops off sharply after 5, there are no gaps in the data, so I'll keep all of this data in the analysis.
+
+##a. Explain why you choose to remove data points from your ‘clean’ dataset.
+
+Based on the above analysis, I am going to only remove one data point from the original data set, that being the house with 23 full baths. The new data set will be called housingClean.
+```{r echo=TRUE}
+housingClean <- subset(housing, bath_full_count <= 6)
+glimpse(housingClean)
+```
+
+##b. Create two variables; one that will contain the variables Sale Price and Square Foot of Lot (same variables used from previous assignment on simple regression) and one that will contain Sale Price, Bedrooms, and Bath Full Count as predictors. 
+```{r echo=TRUE}
+regrLotSize <- lm(`Sale Price` ~ log10(sq_ft_lot), data=housingClean)
+regrBedBath <- lm(`Sale Price` ~ bedrooms + bath_full_count, data=housingClean)
+```
+
+##c. Execute a summary() function on two variables defined in the previous step to compare the model results. What are the R2 and Adjusted R2 statistics?  Explain what these results tell you about the overall model. Did the inclusion of the additional predictors help explain any large variations found in Sale Price?
+```{r echo=TRUE}
+summary(regrLotSize) 
+summary(regrBedBath)
+```
+
+The R2 and Adjusted R2 results for the Bed and Bath model are the same value, 0.109, meaning that this model explains 10.9% of the variation in the outcome variable, Sale Price. For the lot size model, however, the R2 is 0.0164 and the Adjusted R2 is 0.0163, meaning that this model only accounts for less than 2% of the variation in the Sales Price. 
+
+The overall model at this point is not exceptionally good at predicting the Sales Price, as almost 90% of the variation in Sales Price is unaccounted for by the better of the two models. In this case, the additional variables made the model better at predicting the outcome variable, by a factor of nearly 10, but the improved model can still be made better, but looking at other variables.
+
+##d. Considering the parameters of the multiple regression model you have created. What are the standardized betas for each parameter and what do the values indicate?
+```{r echo=TRUE}
+lm.beta(regrLotSize)
+lm.beta(regrBedBath)
+```
+
+Standardized Betas are the raw b-values divided by standard error of the associated b-value. They are useful in that they provide a common/standard way of comparing the predictor variables, in that these betas give us the number of standard deviations that the outcome variable will change as a result of a one standard deviation change in that predictor variable.
+
+For the lot size model, the standardized Beta for the single predictor variable, (log10 of) lot size, is 0.13. What this means is that if the (log10 of) lot size increases by one of standard deviation, the Sales Price will increase by 0.13 of its standard deviation. This is not a large effect on the outcome variable, and provides another confirmation that a change in the lot size does not have a large effect on changing the sales price.
+
+For the BedBath model, the standardized Betas are 0.15 for bedrooms and 0.25 for full bathrooms. This tells us that a one standard deviation change in full bathrooms would lead to a 0.25 standard deviation change in the Sales Price, while a corresponding standard deviation change in bedrooms only changes the Sales Price by 0.15 standard deviations. So the number of full bathrooms has a larger effect than the number of bedrooms, by about 67%, on the Sales Price.
+
+##e. Calculate the confidence intervals for the parameters in your model and explain what the results indicate.
+```{r echo=TRUE}
+confint(regrLotSize)
+confint(regrBedBath)
+```
+
+The confidence intervals of the unstandardized beta values are the boundaries constructed such that in 95% of the samples taken from the population, their beta value will be the true value of their beta. Smaller or tighter confidence intervals indicate better models, in that the value of beta in the sample is close to the true value of beta in population. 
+
+The confidence intervals in the lot size model are both quite large, with the rage of the y-intercept coefficient being $128,511, which is about 20% of the Sale Price mean for the data set.
+
+In contrast, the confidence intervals for the BedBath model are much tighter, going from a range of $58,571 for the y-intercept, to $22314 for the full baths, and finally to $15,877 for the bedrooms. These ranges indicate that the parameters for these variables are significant in representing the population.
+
+##f. Assess the improvement of the new model compared to your original model (simple regression model) by testing whether this change is significant by performing an analysis of variance.
+
+It is not appropriate to perform an analysis of variance on these two models, because they are not the result of a hierarchical regression. The BedBath model does not build on the Lot Size model, because the lot size is not a predictor variable in the BedBath model.
+
+From this point, I will work only with the BedBath model, and my analysis will focus on those two predictor variables.
+
+##g. Perform casewise diagnostics to identify outliers and/or influential cases, storing each functions output in a dataframe assigned to a unique variable name.
+
+I will execute the functions, append the results to the original (clean) data set, and save the resulting data frane to an output ".csv" file.
+```{r echo=TRUE}
+housingClean$residuals <- resid(regrBedBath)
+housingClean$standardized.residuals <- rstandard(regrBedBath)
+housingClean$studentized.residuals <- rstudent(regrBedBath)
+housingClean$cooks.distance <- cooks.distance(regrBedBath)
+housingClean$dfbeta <- dfbeta(regrBedBath)
+housingClean$dffit <- dffits(regrBedBath)
+housingClean$leverage <- hatvalues(regrBedBath)
+housingClean$covariance.ratios <- covratio(regrBedBath)
+
+write.table(housingClean, "Housing Clean with Diagnostics.csv", sep=",", row.names=FALSE)
+```
+
+##h. Calculate the standardized residuals using the appropriate command, specifying those that are +-2, storing the results of large residuals in a variable you create.
+```{r echo=TRUE}
+housingClean$large.residual <- housingClean$standardized.residuals > 2 | housingClean$standardized.residuals < -2
+
+glimpse(housingClean$large.residual)
+write.table(housingClean, "Housing Clean with Diagnostics.csv", sep=",", row.names=FALSE)
+```
+
+I have specified the large residuals into a variable called large.residual and added it to the data frame. Additionally, I have rewritten the data frame again to the file, so that I'll capture the results.
+
+##i. Use the appropriate function to show the sum of large residuals.
+```{r echo=TRUE}
+sum(housingClean$large.residual)
+```
+
+There are 339 rows that evaluate to having standardized residuals either less than -2 or greater than 2.
+
+##j. Which specific variables have large residuals (only cases that evaluate as TRUE)?
+
+To review, the residual is the difference between the value of the outcome variable as predicted by the model and the value of the outcome variable observed in the sample. As a result, in this data set, the only variable that will have residuals is Sale Price.
+
+The standardized residual is the residual value divided by the standard deviation of the model's outcome variable. Therefore, we would expect that about 95% of the standardized residuals would be between -2 and 2, therefore about 5% to be less than -2 or greater than 2. As the results below show, only about 2.6% of the residuals are meet this latter criteria.
+```{r echo=TRUE}
+housingLarge <- subset(housingClean, large.residual == TRUE)
+glimpse(housingLarge)
+
+percentLarge = 100 * (sum(housingClean$large.residual)/nrow(housingClean))
+percentLarge
+```
+
+##k. Investigate further by calculating the leverage, cooks distance, and covariance rations. Comment on all cases that are problematics.
+
+What I'm going to do for this step is focus on the observations with the large residuals, and attempt to identify cases that I will want to investigate in more detail.
+```{r echo=TRUE}
+options(scipen=100)
+options(digits=5)
+summary(housingLarge$cooks.distance)
+summary(housingLarge$leverage)
+
+```
+
+First, I will look at the Cook's distance values for these observations. The Cook's distance is a measure of of the overall influence of a single case on the model, and values greater than 1 should be looked at. As the summary values show, the maximum Cook's distance value is only 0.0305, so there are no observations which would raise any alarms here.
+
+Second, I will look at leverage, also known as the hat value. This metric measures the influence of the observed value of the outcome variable over the predicted values. Values close to 1 are again the ones that we should examine closer, as they indicate observations with undue influence over the predicted values. Additionally, if all of the leverage values are close to the average value (close defined as less than 2 times the average), then it shows that no observations are exercising undue leverage on the model. There are 72 values of the 339 that have a leverage greater than twice the average leverage, so I may want to look at them.
+```{r echo=TRUE}
+leverage2avg <- mean(housingClean$leverage) * 2
+leverage2avg
+housingLeverage <- subset(housingLarge, housingLarge$leverage > leverage2avg)
+nrow(housingLeverage)
+```
+
+Finally, a look at the covariance ratios. The acceptable covariance range (CVR) is 1 minus 3 times the average leverage to 1 plus 3 times the average leverage, computed below.
+```{r echo=TRUE}
+lowCVR = 1 - 3 * (mean(housingClean$leverage))
+highCVR = 1 + 3 * (mean(housingClean$leverage))
+lowCVR
+highCVR
+summary(housingLarge$covariance.ratios)
+housingCVR <- subset(housingLarge, (housingLarge$covariance.ratios<lowCVR | housingLarge$covariance.ratios>highCVR))
+nrow(housingCVR)
+```
+
+Of the 339 cases with large residuals, 272 of them have covariance ratios outside the acceptable CVR. As with the leverage cases, I may want to examine these cases further, to determine whether or not to exclude them from the model.
+
+As our textbook authors note, if any of the cases look to be outliers in their value of Y, but their Cook's distance is less than 1, there is no real need to exclude them from the data set, because those individual points do not have a large effect on the regression analysis as a whole. So for the large residual observations here, the 339 cases, while they may appear to be potential outlier cases, none of them have a Cook's distance approaching 1, so I will keep them all. 
+
+The leverage and covariance ratio tests show a number of observations that are worth investigating further, if the objective is to determine what is causing these values to be outside of acceptable ranges, but that is beyond the scope of this assignment. Were I fully investigating this data for an extended analysis, then I would look at those individual cases.
+
+##l. Perform the necessary calculations to assess the assumption of independence and state if the condition is met or not.
+
+The Durbin-Watson test provides a measure of the independence of the model, with a return value range of 0 to 4. Our textbook authors suggest that values less than 1 or greater than 3 should be looked at, as potential evidence of autocorrelation. Independence in this evaluation means that, for any two observations, the residual terms should be uncorrelated (independent).
+```{r echo=TRUE}
+durbinWatsonTest(regrBedBath)
+```
+
+The test here shows a value of 0.71 suggests that there is significant autocorrelation between adjacent residuals, annd the p-value of 0 leads us to conclude that the result is significant. The condition of independence, per this test, is not met.
+
+##m. Perform the necessary calculations to assess the assumption of no multicollinearity and state if the condition is met or not.
+
+I will use the VIF function to assess the collinearity of the model. Additionally, I'll check the tolerance using 1/VIF.
+```{r echo=TRUE}
+vif(regrBedBath)
+1/vif(regrBedBath)
+```
+
+The VIF values for bedrooms and full baths is a bit above 1, and with the smallest possible value of VIF being 1, we can be confident that there is not multicollinearity in the model. Additionally, the VIF recipricol values for tolerance are close to 0.9, which are not in the range that we could be concerned with.
+
+
+##n. Visually check the assumptions related to the residuals using the plot() and hist() functions. Summarize what each graph is informing you of and if any anomalies are present.
+
+I will first run plot() on the model to see what the graphs show us.
+```{r echo=TRUE}
+plot(regrBedBath)
+```
+
+The plots produced are:
+
+1. Residuals against the fitted values:  The plot appears to show that the assumptions of linearity and homoscedasticity have been met. There are no abnormal distributions of the data around the zero, and the points appear to be fairly evenly distributed.
+
+2. Q-Q Plot: At the extremes of +/- 2 standard deviations, the standardized residuals deviate significantly from the line, indicating skew, particularly at the high end of the range. This is not unexpected, as the very expensive homes are not predicted well by the number of bedrooms and full baths. 
+
+3. Square root of Standardized Residuals against Fitted values: Similar to the first graph, the data appears to be fairly evenly distributed, without any glaring deviations.
+
+4. Standardized residuals against Cook's distance: There appear to be a few values wiith a larger Cook's distance, but they all appear to be close to the 0 line for the standardized residuals, so they are not concerning. The plot does call out 3 values which we may want to investigate further on, id's 2851, 8886, and 11981, as they have high standardized residuals and a Cook's distance of around 0.002. As I noted in the discussion of Cook's distance above, because their Cook's distance values are well below 1, these values are not overly influencing the model's calculations, so there is no need to remove them from the model. Looking at the Sales Price of these three data points (see code below), we can see that these are three of the most expensive homes in the data set, each over $3 million, so it is not unexpected that they would be flagged as potential outliers. What this indicates is that the number of bedrooms and bathrooms are not good predictors for the Sales Prices of these homes, and there are likely other factors that we would want to consider to predict the Sales Price. Again, I'm not going to eliminate them from the model, as they are not overly influencing its calculations.
+```{r echo=TRUE}
+regrBedBath$model[[1]][2851]
+regrBedBath$model[[1]][8886]
+regrBedBath$model[[1]][11981]
+```
+
+Now, let's take a look at the histograms.
+```{r echo=TRUE}
+hist(housingClean$standardized.residuals)
+hist(housingClean$studentized.residuals)
+```
+
+The histograms of the standardized and studentized residuals tell the same story as the Q-Q Plot and Cooks' distance graphs above, in that there is a long right skew, representing the extremely expensive homes in the data set. Again, as we concluded above, the model loses its predictive value, based on the numbers of bedrooms and full baths, for these homes above $2 million. 
+
+##o. Overall, is this regression model unbiased?  If an unbiased regression model, what does this tell us about the sample vs. the entire population model?
+
+Bias in the model refers to the error that is introduced by modeling or approximating a real world scenario, which may have many complex interrelationships, with a simpler model. Bias would indicate that the model has not been specified correctly, or that one or more important variables have been left out. Another way of stating bias is that we have not identified the underlying real world scenario, and adding more data to the data set would not reduce or eliminate the bias. 
+
+The model is biased, as best represented by the Q-Q Plot. For houses that sell in a middle range of prices, somewhere between $300,00 and $1 million, the model does a decent job of predicting the outcome. However, at the lower and higher ends of the price range, the model has significantly large residuals, indicating that it does not predict the Sale Price very well. This indicates that there are other relevant factors that are not being considered by the model, in determining the Sales Price.
+
+Since the model is biased, it would indicate a couple of potential scenarios. 
+
+First, it could be that the sample adequately represents the population, and that there are additional factors that affect a house's sale price, that the model does not consider. For example, one factor not represented in the data set, but which is generally thought to be a strong indicator for housing prices, is the quality of the schools that the houses are zoned for. Given that this model only contains two factors, I believe that this is the correct outcome. 
+
+A second, but less likely, outcome, is that the data set has some form of selection bias, in that the housing market realities are not adequately represented. In statistical terms, the sample would not correctly represent the population. While there may be some of this in the sample, I believe that the first scenario is the much more likely, and that the model is biased, in not containing the most relevant factors that help to determine the sales price.

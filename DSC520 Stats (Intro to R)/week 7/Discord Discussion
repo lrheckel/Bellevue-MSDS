@@ -1,0 +1,13 @@
+I'm going to come at this a little differently. First, in my opinion, the reading for this week is GOLDEN, and I'm 100% certain that I will come back to this again and again, both in this program and in my work. 
+
+From pages 261-276, the authors lay out how to do a multiple regression, and they describe all of the tests that one does on a the regression model, to determine if the model is any good or not. There is a bit of math and stats equations in there, but I would submit that they are not as important as understanding:   1) What each test is looking/testing for;   2) How to interpret the results of each test (and potential actions to take);  and 3)  The order to execute the tests.
+
+Then, from pages 279-308, the authors show how to do what they just explained, in R. What functions to run, what the results look like, and how to interpret the results. There were so many "ah ha" moments for me during this part of the reading, I feel like I'm back in my college sophomore stats class again, learning it all for the first time.
+
+For me, the reading lays out a "recipe" for analyzing a dataset, not necessarily every data set, but definitely if you  have regression in mind. This recipes actually picks up the process after we've looked at the outcome and predictor variables graphically, to visually detect outliers or other data anomalies. 
+
+This is where the homework for this week comes in. Step (a) assumes that you have looked at the outcome and predictor variables visually, and have made decisions on eliminating outliers, or in other words, you have "cleaned" the data set. Cleaning doesn't mean eliminating variables (columns), but it means detecting rows the have outlier data, and removing them.
+
+From Step (b) on in the homework, it looks almost identical to the "recipe" on pages 279-308. I don't know about the last question about bias (will have to Google that one), but the rest of the assignment is pretty much follow the book.
+
+One last comment, and then I'll go away (as you are  probably saying "who the f___  does he think he is?). The recipe that the authors laid out is how I plan to proceed with my project analysis. One last point, that they lay out at the end of the first, stats-based, section. In Section 7.8.1 on page 276, they talk about an approach to regression on your data set that looks really good. Another good way to approach the project.
