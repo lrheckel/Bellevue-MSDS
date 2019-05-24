@@ -1,0 +1,582 @@
+---
+title: "DSC520 Final Project Assignment Final Results and Summary"
+author: "Larry Heckel"
+date: "May 24, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Project Template
+
+##### NOTE AS OF MAY 2: My Director has asked me to focus on the Service Requests in this analysis, and not to work on the Incidents. The reason for this is that he has engaged the IT Data Science team to do an analysis across all App Maintenance of the incidents, to look for automation, left shift, and MTTR reduction opportunities. While I am only focusing on MTTR in my analysis, for me to also do incidents would be a duplication, so he has asked me to just focus on the service requests (and for the Digital Service, which I lead).
+
+## Section 1
+
+  •	Explain what your interests are in the data sets identified.
+
+      I manage the teams that support the digital assets for Johnson & Johnson. My interest is in
+      identifying controllable factors that can help to improve the performance of my teams in
+      resolving incident and service request tickets.
+
+  •	What is the target audience for this research?
+
+      The target audience is the Commercial Application Maintenance team within J&J Technology
+      Services.
+
+  •	Identify the Packages that are needed for your project.
+
+      I think that I will use the following packages:  boot, pastecs, ggplot2, MASS, survey, and
+      readr.
+
+  •	Original source where the data was obtained is cited and, if possible, hyperlinked.
+
+      I have downloaded the data from the internal J&J Performance Metrics site, which is a series
+      of Tableau dashboards that we use for managing our service. I am not able to link to the
+      site, because it sits behind the J&J firewall and is only accessible from the J&J network.
+
+  •	Source data is thoroughly explained (i.e. what was the original purpose of the data, when was it collected, how many variables did the original have, explain any peculiarities of the source data such as how missing values are recorded, or how data was imputed, etc.).
+
+      The original purpose of the source data is to record and track incident and service request
+      tickets with Johnson & Johnson. J&J uses a customized version of the Service Now software
+      application for this purpose. The ticket data is extracted several times a day in its raw
+      form to the Enterprise Data Lake (EDL), and is cleaned and transformed into data marts for
+      reporting. Tableau dashboards have been created for J&J Service Owners and Vendor partners
+      to have support metrics calculated from the data, to manage their services.
+
+      I downloaded the data sets from the Tableau dashboards on April 1, to represent a full 3
+      months of data in 2019 to start with. I also included the data from September through
+      December of 2018, but my plan is to initially analyze that separately from the 2019 data.
+      The reason for this is that J&J recently signed a new set of support contracts with its
+      vendor partners, and the phase in of the new contract occurred during those last for months
+      of 2018. January was the first full month of the new contract, so I want to see if there are
+      significant differences in the metrics between the two time periods, as the vendors adapted
+      and adjusted their teams’ behaviors for the new contract terms and incentives. If I
+      determine that combining the two time periods will be useful, then I will do so. I will also
+      probably do another download at the end of May, to take advantage of the additional month of
+      data available.
+
+      In the Incident data set, there are 87 variables, and the Service Request data set contains
+      53 variables. Unfortunately, the data and metadata collected for the two types of tickets
+      does not easily line up, so we generally analyze them separately. Additionally, the two
+      types of tickets have different Service Level Agreements (such as response and resolution
+      time requirements), so our response mechanisms are different, and therefore not compatible
+      to combine for detailed analysis. The only times when we will combine the two types of
+      tickets is when we are highly summarizing the data, just to get basic ticket counts at high
+      levels.
+
+      The columns that are going to be important in the analysis should all have data, as they are
+      all fields that are required to be filled in during the life-cycle of each ticket. Should
+      there be missing fields, I will most likely remove those records, instead of trying to
+      impute values into the data set. For certain column values that are completed from selection
+      lists within Service Now, I will look closely at chosen values that seem out of place in the
+      Digital realm, and I will decide what to do with them, either change the value if I can
+      determine from the other ticket data what value makes the most sense, or remove the
+      observation otherwise.
+
+      I have also downloaded a CSV file of the Digital Application Inventory, and I may use some
+      of the application metadata to group the ticket data, as the application inventory contains
+      metadata that we use to manage the service. There are 15 variables in the application
+      inventory data.
+
+## Section 2
+
+  •	Provide an introduction that explains the problem statement you are addressing. Why would someone be interested in this?
+
+      For Application Maintenance teams within Johnson & Johnson, the overall objective to provide
+      the best value at the lowest possible cost. We look to reduce our cost as much as possible,
+      while providing the best service and value. The way that we do  that is twofold. First, we
+      work to reduce or eliminate our non-discretionary workload, which consists of the user
+      incidents and service requests, through things like automation and user self-service.
+      Additionally, we optimize our team and internal working processes, for the tickets that we
+      are not able to eliminate, to reduce the time that it takes to resolve the tickets. This is
+      known as the Time To Resolve, or TTR.
+
+      The problem statement that I am addressing is to identify the controllable factors which
+      most affect the TTR for tickets, so that we can plan and implement internal team operating
+      improvements which will help us to be more efficient in responding to, and resolving,
+      tickets.
+
+      Any Application Maintenance or Support team management would be interested in such analysis,
+      because it will allow their teams to be more efficient in their operations, thereby either
+      reducing costs, or allowing for more value-add activities, or both.
+
+  •	Provide a concise explanation of how you plan to address this problem statement.
+
+      I plan to perform analysis to determine which factors are most correlated to higher or lower
+      TTR values. Are there factors which affect the TTR individually, and what factors work in
+      combination to drive TTR?
+
+  •	Discuss how your proposed approach will address (fully or partially) this problem.
+
+      My approach will identify the controllable factors that support managers can investigate in
+      more detail as to why they drive the TTR, and also investigate actions that they can
+      implement to improve team performance.
+
+  •	List at least 6 research questions you aim to answer.
+  
+      How does the resolution type and category affect TTR? Should we be evaluating TTR for
+      different resolution types separately?
+
+      Does Knowledge Article usage have a discernible affect on TTR? We know that KA’s are useful
+      for pushing ticket resolution to less experienced and lower cost team members, but do we
+      know if KA’s help them resolve faster?
+
+      How does the individual application/platform affect TTR? As above, should we be separately
+      evaluating TTR for individual applications?
+
+      What factors have the greatest potential for TTR improvement? Are there factors that could
+      be considered “low hanging fruit”?
+    
+      Are there quantitative factors which have an effect on the TTR?
+
+      Is there seasonality in the TTR, on either a weekly or monthly basis? Do we see any TTR
+      patterns for tickets opened on particular days of the week, or portions of the month?
+
+  •	Explain how your analysis may help the consumer of your research findings (recall your target audience from Section 1).
+
+      My research findings will provide support managers with places in their support service
+      offerings and teams that have opportunities to optimize. By optimizing their services and
+      teams, they will be able to lower their non-discretionary costs, and either return those
+      savings back to their business partners, or use that budget to focus on discretionary
+      activities, that will improve the service and the application performance.
+
+  •	What types of plots and tables will help you to illustrate the findings to your research questions?
+
+      I will initially be using scatter plots in to visually examine the correlations between TTR
+      and the various factors from the ticket data.
+
+      I think that I will be using linear graphs and box plots in my analysis and presentations.
+
+      Within factors, I expect to use histograms or density plots to also report on how the TTR’s
+      are distributed, to give us an idea which observations and types we will want to review
+      further for action.
+
+  •	What do you not know how to do right now that you need to learn to answer your research questions?
+
+      I don’t yet know how to run correlations and regressions (both individual and multiple). I
+      anticipate that I will need to understand the topics coming up in the class to be successful.
+
+      I haven’t yet looked closely at the data quality, so there may be data elements and
+      observations that I will need to eliminate.
+
+      Finally, I know that there will be outlier data in the TTR’s, and I don’t yet know how I
+      will handle them.
+
+```{r echo=FALSE}
+
+# libraries to be used
+library(ggplot2)
+library(readr)
+library(dplyr)
+# library(stringr)
+# library(psych)
+# library(janitor)
+library(car)
+# library(QuantPsyc)
+# library(pastecs)
+library(ggm)
+# library(dlookr)
+library(DataExplorer)
+library(tidyr)
+library(lubridate)
+library(Hmisc)
+```
+
+## Section 3
+
+  •	Data importing and cleaning steps are explained in the text and in the DataCamp exercises (tell me why you are doing the data cleaning activities that you perform) and follow a logical process.
+
+      The incident and service request data sets have to be handled as separate analyses, because
+      several of the key variables in each of the sets are not directly comparable.
+
+```{r echo=TRUE}
+
+options(scipen=100)
+options(digits=2)
+
+# read the files
+#CREATE_DATETIME is a character field, so I need it to be a date field
+servReqData <- read_csv("SR_data.csv", col_types = cols(CREATE_DATETIME = col_datetime(format = "%m/%d/%Y %H:%M")), guess_max = 15000)
+appInvData <- read_csv("Count_data.csv",guess_max = 15000)
+
+#only the SR and App Inv columns that we want
+servReqClean <- select(servReqData,c(`RESL GRP`,OPEN,`Resolve- Close Date`,`CREATE DATE`,MTTR,APPL_TIER,SUPPORT_GROUP,CLUSTER,VENDOR,`CLOSE DATETIME`,CREATE_DATETIME,`FULFILL_DTTM`,APPLICATION,`REQUEST ID`,priority,reassignment_count,CAT_CATLG_DESC,state,status,task_number))
+
+appInvClean <- select(appInvData,c(`Support Managed By`, Cluster_, TAO, APPLICATION, Category, `Cluster SP`, `TAO Group`, `Dv Cmdb Ci`, `Support Group Manager`, `TAO Manager`, `Operational Status`, `Parent of Support`, `Support Group 1`, `SLA Active`, `Business Service`, `User Region` ,Cluster, Vendor, GxP, `BT Company`, `Service Level Medal`, `Status Reason` ,`Support Group 2` ,`Support Group 3` ,Zcode ,Gso ,`Managing Region` ,`App Name`, Rso, appl_unique_id, `App Alias`, `App ID`, COE, `ITS Managed`, GOC, Type, `U Unique Ci`, `Used For`, `T-Shirt`))
+
+```
+
+      The following steps will apply to both data sets, but because the variables with the same
+      business meaning may have different names in the two sets, I’ll refer here to the business
+      meaning, rather than the actual variable names.
+
+          The first step will be to join the ticket data sets with the application inventory data
+          set. This step is actually a major problem for the App Maintenance team right now,
+          because there are meta data elements about the applications that are not currently
+          available in the Tableau dashboards that J&J utilizes. I have mentioned about a new
+          vendor contract that was executed, and when this occurred, the system that provided J&J
+          management information was no longer used, but the critical management data that it
+          provided was not replaced. The application inventory data set, that my team is
+          developing provides this data. We are currently in QA testing for this, and anticipate
+          including this data in the Tableau dashboards by the middle of May.
+          
+          The join of the two data sets will be using the dplyr::left_join function, on the
+          application name for service requests and the application ID for incidents.
+          
+```{r echo=TRUE}
+#combine SR data with App Inv data
+srAppDataClean <- left_join(servReqClean, appInvClean, by="APPLICATION")
+glimpse(srAppDataClean)
+```
+
+          Next, because the data includes all tickets, I will remove those which are unresolved
+          and still open at the time of the data extraction. There will be no resolution
+          date-time or MTTR, so we will not have a Time To Resolve to work with.
+
+```{r echo=TRUE}
+#drop_na uses an OR for the columns listed, if one lists more than one column
+srAppDataFilterClean <- drop_na(srAppDataClean, MTTR)
+```
+          Finally, I will remove any tickets for applications that are not supported by my 
+          organization. Although about 85% of the applications within J&J are supported by my
+          organization under internal Statements of Work, the remainder are supported within the
+          business, so tickets for them wil be removed. I am able to use the "T-Shirt" field as 
+          my proxy for this, as this data element is necessary for all supported apps.
+          
+```{r echo=TRUE}
+srAppDataTSOnly <- dplyr::filter(srAppDataFilterClean,!is.na(`T-Shirt`))
+glimpse(srAppDataTSOnly)
+```
+          Having removed the business-centric obvious observations (tickets), I'll now take
+          a look at the data to see what might be missing.
+          
+```{r echo=TRUE}
+plot_missing(srAppDataTSOnly)
+```
+
+        From the plot, I can see that the variables with missing data are all ones that are not
+        important in the context of the analysis, so I won't work on any more businesss-centric
+        element analysis.
+
+  •	With a clean dataset, show what the final data set looks like. However, do not print off a data frame with 200+ rows; show me the data in the most condensed form possible.
+
+      The service request data set, after being combined with the application inventory data set,
+      is listed below.
+```{r echo=TRUE}
+glimpse(srAppDataTSOnly)
+```
+  
+  •	What do you not know how to do right now that you need to learn to import and cleanup your dataset?
+
+     At this point, I have the data set required to begin my analyses. I had to pick up a number
+     of new skills to get to this point, including several dpylr functions, and I'm sure that
+     there will other functionalities within R, that I currently don't know how to use, that I
+     will need.
+          
+
+## Section 4 
+
+  •	Discuss how you plan to uncover new information in the data that is not self-evident.
+  
+      With the exception of the MTTR data itself, all of the variables in both data sets are
+      either categorical or date, and our typical analyses looks at ticket counts by various ways
+      of slicing the data, and over time (trends). As a result, this will be a new type of
+      analysis, but hopefully it will be one that will be understandable and useful for our team.
+      
+      One of the things that I am going to look at is tickets opened by day of the week, 
+      to see if they show any pattern that affects MTTR.
+      
+```{r echo=TRUE}
+srAppDataTSOnly <- mutate(srAppDataTSOnly, Day_Opened=wday(srAppDataTSOnly$CREATE_DATETIME, label=TRUE) )
+glimpse(srAppDataTSOnly)
+```
+      One best practice in Operations is to have Knowledge Articles (KA) so that tickets can be
+      resolved at a lower skill level, and faster. I am going to look at that potential
+      correlation.
+    .
+      Finally, I’ll be looking at the resolution codes of the tickets, to determine if the type of
+      item or service requested has an effect on the time to resolve the request.
+
+  •	What are different ways you could look at this data to answer the questions you want to answer?
+
+      The bottom-line question is to attempt to find controllable factors that have a negative
+      correlation to MTTR, with negative in this context meaning that they correlate to a longer
+      MTTR, or in other words, a longer time to resolve the ticket.
+
+  •	Do you plan to slice and dice the data in different ways, create new variables, or join separate data frames to create new summary information? Explain.
+
+      I will subset the data in several ways, to see if there are J&J and/or Vendor groupings
+      which may have an effect on the MTTR. These are all items that the J&J Management is
+      interested in, to enable the leaders of these data slices to learn about their support
+      services.
+    
+          Managing Region – North America (NA), Latin America (LATAM), Europe Middle East Africa
+          (EMEA), Asia Pacific (ASPAC)
+          
+          GOC – Global Operating Company
+          
+          RSO --- Regional Service Owner, the J&J employee directly accountable for the support of
+          those applications
+          
+          Vendor Support Group – Rapid Response or Specialist for each Vendor
+
+      I have joined the ticket data with the Application Inventory data from our Configuration
+      Management Database (CMDB), as the latter contains the J&J management information associated
+      with each application.
+    
+  •	How could you summarize your data to answer key questions?
+  
+      The TTR for each ticket represents a length of time. I am planning to summarize the MTTR
+      (Mean TTR) by various time periods, such as week and month, and the above categories, 
+      to see if I can detect any kinds of trends or patterns.
+```{r echo=TRUE}
+srAppDataTSOnly <- mutate(srAppDataTSOnly, Month_Opened=month(srAppDataTSOnly$CREATE_DATETIME, label=TRUE) )
+glimpse(srAppDataTSOnly)
+```
+
+  •	What types of plots and tables will help you to illustrate the findings to your questions? Ensure that all graph plots have axis titles, legend if necessary, scales are appropriate, appropriate geoms used, etc.).
+
+      My first plot will be to look at the MTTR data itself, to see what the distribution looks
+      like, and potentially detect outliers.
+```{r echo=FALSE}
+plot_histogram(srAppDataTSOnly)
+
+ggplot(data = srAppDataTSOnly) +
+  aes(x = MTTR, y = MTTR) +
+  geom_point(color = '#0c4c8a') +
+  theme_grey()
+```
+      I can see that there appear to be a few MTTR's above about 2,000 hours, so I'll take a look at the 
+      summary data to see what I have. As an aside, because I only have a single numerical variable, I on
+      purpose plotted MTTR on both the x and y axes, to the this view.
+```{r echo=TRUE}
+summary(srAppDataTSOnly$MTTR)
+```  
+      The Median is 66 hours, which means that half of the tickets are being resolved in less than 3 days,
+      but the Mean is 140 hours, meaning that a smaller number of "longer to resolve" tickets are skewing
+      the MTTR distribution.
+      
+      Because of this skew, I'm going to divide the data set into two, and proceed from there. The longest
+      Service Level Agreement (SLA) TTR is 20 days, which is 480 hours. Anything above 480 hours breaches the
+      TTR SLR, and these breaches generally have special-cause reasons for the breach, so I'll focus on those
+      tickets that are resolved in 480 hours or under. While the maximum TTR's vary by SLA Metal Level
+      (GOLD, SILVER,BRONZE, IRON), it makes sense to work with the data at 20 days or below, instead of
+      grouping by the metal level.
+      
+```{r echo=TRUE}
+srAppDataTSOnlySLA <- subset(srAppDataTSOnly, MTTR <= 480)
+glimpse(srAppDataTSOnlySLA)
+summary(srAppDataTSOnlySLA$MTTR)
+```
+      This subsetting removed 696 tickets, or about 6% of the overall number. The summary statistics seem to
+      be more workable, but the mean is still close to twice the median, indicating that, even with this
+      smaller data set, a smaller count of tickets is skewing the summary.
+      
+      Now I'll look at a histogram and density plot, to see if I can see any other data patterns.
+      
+```{r echo=FALSE}
+ggplot(data = srAppDataTSOnlySLA) +
+  aes(x = MTTR) +
+  geom_histogram(binwidth = 2, fill = '#0c4c8a') +
+  labs(title = 'Histogram of MTTR',
+       x = 'MTTR in Hours',
+       y = 'Count of MTTR',
+       subtitle = '2 Hour Bin Width') +
+  theme_grey()
+
+ggplot(data = srAppDataTSOnlySLA) +
+  aes(x = MTTR) +
+  geom_density(adjust = 1, fill = '#0c4c8a') +
+  labs(title = 'Density of MTTR',
+       x = 'MTTR in Hours',
+       y = 'Density Percent') +
+  theme_grey()
+```
+
+      The Density plot is the better view, showing that many tickets are fairly quickly resolved, and then
+      there is a lengthy right skew through to 480 hours.
+      
+      I'm wondering if there are other ways to look at the MTTR to potentially reveal other patterns that may
+      be helpful.
+      
+      Let's take a look at density plots of the MTTR, faceted by the day of the week that the ticket was
+      opened.
+```{r echo=FALSE} 
+ggplot(data = srAppDataTSOnlySLA) +
+  aes(x = MTTR) +
+  geom_density(adjust = 1, fill = '#0c4c8a') +
+  labs(title = 'Density of MTTR',
+       x = 'MTTR in Hours',
+       y = 'Density Percent') +
+  theme_grey() +
+  facet_wrap(~ Day_Opened, ncol=2)
+```
+      This view of the MTTR is actually quite enlightening, and the graphs are easily explainable.
+      
+          1. The Mon-Thu graphs all look the same. Tickets are generally resolved within the first 2-3
+              days after they are opened, or they have a long right skew of MTTR. These are consistent
+              with the overall MTTR view.
+          2. The Sunday graph shows a smoother and longer initial grouping, with the same long right skew.
+              Tickets that come in on Sunday are not typically looked at until Monday morning, and then
+              resolved in a normal time, so there is not that peak around 2-3 days.
+          3. The Friday and Saturday plots show what the MTTR looks like because most all of the applications
+              don't contract for weekend support. On Fridays, a few tickets are resolved, and then very little
+              is worked on over the weekend, until Monday. Same pattern for Saturday tickets, with the peak
+              a little earlier than Friday, reflecting fewer hours between Saturday and Monday, as compared
+              to Friday to Monday. Additionally, Saturday has a second peak, at about 6 days, which would be
+              Thursdays, and I'm thinking that maybe this is because of the teams trying to close out
+              tickets by end of the work week. Don't know for sure, and at this point, I'm not going to go
+              down that investigative path, until I know a little bit more.
+              
+        So the question is, if I decide to subset the higher MTTR's, what makes sense? Let's take
+        a look at the summary statistics by day.
+        
+```{r echo=TRUE}
+tapply(srAppDataTSOnlySLA$MTTR, srAppDataTSOnlySLA$Day_Opened, summary)
+```
+      The summary statistics by Day Opened confirm the graphs. The MTTR is highly dependent on the day that 
+      the ticket is opened, therefore, what I think that I am going to need to do in the analysis is control
+      for the Day Opened, and work with that. What that means practically is that I will need to include
+      Day Opened as a predictor variable in my analyses, so that I can isolate it out and determine the 
+      "true" effects of the other predictor variables.
+
+
+  •	What do you not know how to do right now that you need to learn to answer your questions?
+  
+      At this time, I don't know what I don't know. I think that my next steps are to begin running some
+      linear regression models, predicting MTTR with various predictor variables, and see where the
+      data leads me.
+
+  •	Do you plan on incorporating any machine learning techniques to answer your research questions? Explain.
+  
+      I don't plan to utilize any machine learning techniques in this particular analysis, but once 
+      complete, I'm going to bring this to my team to see if there is anything that we could do from the 
+      perspective of ticket elimination, with further learnings on the tickets.
+
+
+### Addtional Suggestions from the Course Professor
+
+Suggestion from the course professor: Some additional questions you may want to consider asking yourself as you work through this section of the project: 
+1.	What features could you ﬁlter on?
+2.	How could arranging your data in different ways help?
+3.	Can you reduce your data by selecting only certain variables?
+4.	Could creating new variables add new insights?
+5.	Could summary statistics at different categorical levels tell you more?
+6.	How can you incorporate the pipe (%>%) operator to make your code more efficient?
+
+### Additional Analysis
+
+Now that I know that the day opened is seasonal on MTTR, there are 6 items of metadata that I'm interested in correlating to the MTTR, to see which ones should be more deeply looked at by my teams. 
+
+The first is the categorization of the ticket, with the variable CAT_CATLG_DESC. This is a selection box in the ticketing system, and while not perfectly categorical, it describes, in general, the type of work that the ticket calls on the support team to execute. The anecdotal belief of the support teams is that certain categories of tickets take longer to resolve, because of their complexity or number of steps required to resolve. 
+
+The next two items to look at will be the Tier of support and the ticket priority. The former defines 3 support services level agreement (SLA), GOLD/SILVER/BRONZE, based on the business criticality of the application. The ticket priority, from 1-4, defines the urgency required to resolve the ticket. A matrix of values, with Tier defining the rows and SLA the columns, provides the times required to both respond to and resolve tickets meeting those two criteria.
+
+The next two items that I want to look at are the Support Group annd the Managing Region. The Support Group is a 2 part definition, with the first being the vendor partner and the second being the team's skill level. For the skill level, the Rapid Response team has the lower skills, and it is generally staffed my more junior developers to resolve simpler and recurring tickets, while the Specialist team, with the higher skill level, addresses tickets that are more complex or require a greater number of development processes to resolve, such as code changes and deployments.
+
+Finally, I want to look at the Regional Service Owner (RSO) field, as that field defines the J&J Lead/Manager on my team who is responsible for the support service for the J&J management grouping. While the RSO doesen't work directly on tickets, he/she manages the support teams for the applications her portfolio, and she will ultimately be responsible for the further investigations and improvement activities that this analysis will point to requiring.
+
+One variable that I am not going to look at is the actual application, for two reasons.
+
+  1. Most of the Digital applications are built on Appication Platform templated, with the applications themselves configured to look and perform similarly for over 90% of their content. As such, it doesn't necessarily make sense to look at the individual applications as it does their underlying platforms. And, while I would very much like to include that in my analysis, it is, unfortunately, a missing attribute in our Configuration Management Database (CMDB). When the CMDB was put together, this was not deemed a critical field to track, so it was not included. My teams have built some tracking into some of our SharePoint listings of applications, but the data in these home-grown lists are not clean enough to be useful for this purpose.
+  
+  2. Many of the applications only have a few tickets, so the data will be too sparse for these to be useful.
+
+To make the analysis a bit more straightforward, I'll create a data frame with only the relevant variables.
+
+```{r echo=TRUE}
+finalAnalysisData <- srAppDataTSOnlySLA[c(5,6,7,13,15,17,27,39,40,46,48,54,58:60)]
+finalAnalysisData
+```
+
+So let's go ahead and look at the correlations.
+
+#### MTTR correlated with all of the variables, and incluuding Created Day.
+
+```{r echo=TRUE}
+MttrAll <- lm(MTTR ~ CAT_CATLG_DESC+APPL_TIER+priority+SUPPORT_GROUP+`Managing Region`+Day_Opened, data=finalAnalysisData )
+summary(MttrAll)
+```
+Looking at this initial analysis, I can honestly say that I was not expecting this type of result. What I was really expecting was to see that some forms of tickets are resolved better than others, and I expected to be able to go back to my management and teams with some specific types of tickets to look at for improvements. And while there are 4 types of tickets that I will list below and will direct the teams to investigate, the biggest positive effect on MTTR is the Managing Region for the application. 
+
+In managing MTTR, a smaller value means that the ticket is being resolved faster, which is better. For the Managing Region, the regression is setting North America ("NA") as the base value, and computing the other regions off of it. With NA being "0" for the coefficient, the coefficiennt for the other regions is saying how much faster or slower, on average, they are resolving tickets. ASPAC has a coefficient of -51, meaning that the ASPAC region is resolving tickets more than 2 days faster, on average, than NA. In addition, the P Value <0.01, meaning that this is highly significant. The P Values for the other regions are also highly significant, and coefficients are both greater than NA's, with EMEA at 7 hours and LATAM at more than 41 hours. 
+
+So my initial reaction may be to go back to my management and teams is that we need to look at how the ASPAC team is managing the processing their tickets, to see if some (or all) of the things that they are doing can be applied in the other regions. Each of the regions manages a bit differently, so I don't know if the ASPAC processes would be able to be applied in other regions, but I believe, based on this analysis, that it would be worth the time spent in looking.
+
+One disappointment in the model is that the r-squared value is only 12%, meaning that 88% of the MTTR variation is not explained by the model variables. My intuition is that the Managing Regions might have a significant portion of that 12%, so what I'll do next is run the model with only the Managing Region and Day Created, and let's see what that tells us.
+```{r echo=TRUE}
+MttrManReg <- lm(MTTR ~ `Managing Region`+Day_Opened, data=finalAnalysisData )
+summary(MttrManReg)
+```
+While the R Squared has gone down to 7%, and the coefficients for the Managing Regions have changed a bit, the result still tells me that this is the first course of action is to look at how ASPAC is managing their tickets, and see what can be taken to the other regions. And while this sounds good in theory, the organizational/political considerations are going to drive how I do this. I will need to discuss this result in detail with my Director, because I will need his guidance on how to proceed. I believe that the regions should learn from ASPAC here, but each region is fiercely independent in its own way, so that will be the biggest hurdle to overcome, or maybe not. Tim, my Director, will help me to determine if the potential value is worth the organizational capital that we would need to expend. So I will leave that here for now, with the takeaway to review these regional results with him for further guidance.
+
+Now I want to look in more detail at the ticket types/descriptions, to see if there are incremental improvements that we can make. As I noted aboe, there are 4 which look promising, so I'll run another correlation, to see if those relationships hold on their own.
+```{r echo=TRUE}
+MttrCatDesc <- lm(MTTR ~ CAT_CATLG_DESC+Day_Opened, data=finalAnalysisData )
+summary(MttrCatDesc)
+
+MttrCatDescOnly <- lm(MTTR ~ CAT_CATLG_DESC, data=finalAnalysisData )
+summary(MttrCatDescOnly)
+```
+I ran this twice, once each with and without the Day Created, just to see if there is an effect. By itself, the Catalog Description's R Squared value is about 6%, and with the Day Created, it's only about 7%, so I think that it's fair to base my actions on the results of the analysis with Catalog Description by itself. Based on this, there is one catalog type that I'll direct my teams to look into, that being "Create or modify account access for business applications". It's P Value is significant, and the 67 plus hour coefficient tells me that this is one that is worth looking into. While I haven't looked at these tickets specifically, user access tasks are ones that we have been looking at for automation and self service solutions, so this will go well into that initiative.
+
+At this point, while there may be further analysis necessary, I am not going to go any further, and I'm going to prepare to present these two recommendations to Tim and see where he wants to go with them.
+
+## Section 5 Summary
+
+### Overall, write a coherent narrative that tells a story with the data as you complete this section.
+As I've noted  above, I think that the data leads us to two courses of action, those being to look at how the ASPAC region manages their support processes, and the second to look at the ticket catalog for account access. The former will potentially be a tough one organizationally and politically, so my leadership will need to determine if, and how, they would like for me to proceed. The latter is a fairly straightforward one, and will fit in nicely with other initiatives or conversations already underway.
+
+### Summarize the problem statement you addressed.
+My problem statement was to determine if there are controllable factors that I can determine to reduce the MTTR, and in identifying any factors, be able to go to my management with recommendations for actions to improve the MTTR.
+
+### Summarize how you addressed this problem statement (the data used and the methodology employed). 
+To address the problem statement, I downloaded the ticket data available in the Tableau dashboards, cleaned it to get a usable and workable data set, and then did regresssion analyses to identify the most relevant variables affecting MTTR. I made a "command decision" to exclude tickets with a TTR above 480 hours, with the reasoning being that we need to review those as a separate activity, because tickets that take that long to resolve generally have an assignable root cause unique each ticket, and I think that we should look at the system's "breach reason" for further discovery.
+
+### Summarize the interesting insights that your analysis provided.
+The most interesting insight is the one that shows that ASPAC resolves their tickets more than 2 days faster than the next closest region. As I noted above, pursuing this will require some organizational thought. This was not a result that I expected, but I think that pursuing it bears the highest potential for improvement in our metrics.
+
+I don't know if my management will agree to go down this path, but I am going where the data leads me, and my management will determine if the potential value is worth both the effort and organizational considerations.
+
+### Summarize the implications to the consumer (target audience) of your analysis.
+The biggest implication is that some regions are more efficient than others in managing their tickets. Faced with this data, each of the regions will have to decide, based on their individual circumstances, if they want to learn from, and potentially apply, the processes and techniques used in other regions. 
+
+I think that, faced with the data, one or two of the regional Directors will ask for further and deeper analysis, for reasons beyond the scope of what I am doing here. As the Senior Manager responsible for North America, I'm fully onboard with seeing what ASPAC is doing that we can learn from and potentially apply, but I also understand that my Director will have other considerations for me to include in my action plan. 
+
+For the ticket categories, I will definitely provide these to my vendor partners as action items, and these will be straightforward to prioritize and quantify for potential benefits.
+
+### Discuss the limitations of your analysis and how you, or someone else, could improve or build on it.
+The biggest limitation of this analysis is that I haven't gone deeper, and as I noted above, I think that at least two of the regional Directors will want a deeper analysis of their tickets, before going down the path of looking at ASPAC for best practices to apply. As a general behavior, the regions are protective of their teams and processes, and data that doesn't fit nicely into the region's "narrative" is typically sent back for further analysis, so I expect this to be the same. 
+
+There are certainly additional analysis paths that we can take, for example using platform as a predictor variable, but these will not be available until other data sources are in place. 
+
+I do think that this is the beginning of analyzing our tickets, and while I have focused on MTTR as the outcome variable, my methodology is something that other teams in other support areas are not doing, so I expect them to pick up on this and apply it in their portfolios.
+
+Overall, I believe that this will be an ongoing activity for my organization moving ahead, and I am looking forward to presenting these results and recommendations to my leadership for guidance and next steps actions.
+
+
+### In addition, submit your completed Project using R Markdown or provide a link to where it can also be downloaded from and/or viewed.
+I will submit my .RMD file, HTML output, and source files.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
